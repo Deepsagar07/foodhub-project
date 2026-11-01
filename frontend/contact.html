@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Contact Us</title>
+<meta name="description" content="Contact FoodHub — Dehradun's own food ordering app.">
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-7xl mx-auto px-4 py-10">
+  <h1 class="font-display font-bold text-2xl mb-1">📞 Contact Us</h1>
+  <p class="text-sm text-muted mb-8">Questions, feedback or partnership ideas — we'd love to hear from you.</p>
+
+  <div class="grid md:grid-cols-2 gap-6">
+    <!-- Message form -->
+    <section class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
+      <h2 class="font-display font-semibold text-lg mb-4">Send us a message</h2>
+      <form onsubmit="sendMessage(event)" class="space-y-3">
+        <input id="c-name" class="input" placeholder="Your name">
+        <input id="c-email" type="email" class="input" placeholder="Email address">
+        <input id="c-subject" class="input" placeholder="Subject (e.g. Order issue, Partnership)">
+        <textarea id="c-msg" class="input" rows="4" placeholder="How can we help?"></textarea>
+        <button type="submit" class="btn-brand w-full">Send Message →</button>
+        <p class="text-xs text-muted text-center">This opens your email app with the message ready to send.</p>
+      </form>
+    </section>
+
+    <!-- Info cards -->
+    <div class="space-y-4">
+      <div class="surface rounded-2xl p-5 flex gap-4 items-start" style="box-shadow:var(--shadow)">
+        <span class="text-2xl">📧</span>
+        <div><h3 class="font-semibold">Email</h3><p class="text-sm text-muted">hello@foodhub.in<br><span class="text-xs">Replies within 24 hours</span></p></div>
+      </div>
+      <div class="surface rounded-2xl p-5 flex gap-4 items-start" style="box-shadow:var(--shadow)">
+        <span class="text-2xl">📞</span>
+        <div><h3 class="font-semibold">Toll-free</h3><p class="text-sm text-muted">1800-419-0000<br><span class="text-xs">9 AM – 11 PM, all days</span></p></div>
+      </div>
+      <div class="surface rounded-2xl p-5 flex gap-4 items-start" style="box-shadow:var(--shadow)">
+        <span class="text-2xl">📍</span>
+        <div><h3 class="font-semibold">Office</h3><p class="text-sm text-muted">14, Rajpur Road,<br>Dehradun, Uttarakhand 248001</p></div>
+      </div>
+      <div class="surface rounded-2xl p-5 flex gap-4 items-start" style="box-shadow:var(--shadow)">
+        <span class="text-2xl">🤝</span>
+        <div><h3 class="font-semibold">Partner with us</h3><p class="text-sm text-muted">Own a restaurant in Dehradun? Write to <span class="font-medium">partners@foodhub.in</span></p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <section class="mt-8">
+    <h2 class="font-display font-bold text-xl mb-4">Find us in Dehradun</h2>
+    <div class="rounded-3xl overflow-hidden" style="box-shadow:var(--shadow)">
+      <iframe title="FoodHub location map — Dehradun" class="w-full h-80 border-0"
+        src="https://www.openstreetmap.org/export/embed.html?bbox=77.99%2C30.29%2C78.07%2C30.35&amp;layer=mapnik&amp;marker=30.3165%2C78.0322"></iframe>
+    </div>
+    <p class="text-xs text-muted mt-2">Map data © OpenStreetMap contributors</p>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+/** Compose the message into the user's own email app (no backend needed). */
+function sendMessage(e) {
+  e.preventDefault();
+  const name = document.getElementById("c-name").value.trim();
+  const email = document.getElementById("c-email").value.trim();
+  const subject = document.getElementById("c-subject").value.trim();
+  const msg = document.getElementById("c-msg").value.trim();
+  if (!name || !email || !msg) return toast("Please fill your name, email and message.", "error");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast("Please enter a valid email address.", "error");
+  const body = encodeURIComponent("Name: " + name + "\nEmail: " + email + "\n\n" + msg);
+  window.location.href = "mailto:hello@foodhub.in?subject=" + encodeURIComponent(subject || ("Message from " + name)) + "&body=" + body;
+  toast("Opening your email app…", "success");
+}
+
+initCommon();
+</script>
+</body>
+</html>

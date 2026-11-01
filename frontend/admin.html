@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Admin Dashboard</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-7xl mx-auto px-4 py-6">
+  <h1 class="font-display font-bold text-2xl mb-5">Admin Dashboard</h1>
+
+  <!-- Stat cards -->
+  <div id="stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"></div>
+
+  <div class="grid lg:grid-cols-2 gap-6 mb-8">
+    <!-- Top dishes chart -->
+    <section class="surface rounded-2xl p-5" style="box-shadow:var(--shadow)">
+      <h2 class="font-display font-semibold mb-3">🔥 Top Dishes (by orders)</h2>
+      <div class="h-64"><canvas id="dish-chart"></canvas></div>
+    </section>
+
+    <!-- Menu manager -->
+    <section class="surface rounded-2xl p-5" style="box-shadow:var(--shadow)">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-display font-semibold">🍽️ Menu Manager</h2>
+        <button class="btn-brand !py-2 !px-4 text-sm" onclick="openMenuModal()">+ Add Dish</button>
+      </div>
+      <select id="menu-rest" class="input mb-3" onchange="loadMenu()"></select>
+      <div id="menu-list" class="space-y-2 max-h-80 overflow-y-auto"></div>
+    </section>
+  </div>
+
+  <!-- Orders manager -->
+  <section class="surface rounded-2xl p-5" style="box-shadow:var(--shadow)">
+    <h2 class="font-display font-semibold mb-3">📦 Orders</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[640px]">
+        <thead>
+          <tr class="text-left text-muted border-b" style="border-color:var(--border)">
+            <th class="py-2 pr-3">Order</th>
+            <th class="py-2 pr-3">Customer</th>
+            <th class="py-2 pr-3">Items</th>
+            <th class="py-2 pr-3">Total</th>
+            <th class="py-2 pr-3">Status</th>
+          </tr>
+        </thead>
+        <tbody id="orders-body"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- Add/Edit dish modal -->
+<div id="menu-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/50" onclick="closeMenuModal()"></div>
+  <div class="surface rounded-2xl p-6 w-full max-w-md relative" style="box-shadow:var(--shadow)">
+    <h3 id="modal-title" class="font-display font-bold text-lg mb-4">Add Dish</h3>
+    <input type="hidden" id="m-id">
+    <div class="space-y-3">
+      <input id="m-name" class="input" placeholder="Dish name">
+      <textarea id="m-desc" class="input" rows="2" placeholder="Description"></textarea>
+      <div class="grid grid-cols-2 gap-3">
+        <input id="m-price" type="number" class="input" placeholder="Price (₹)" min="1">
+        <input id="m-category" class="input" placeholder="Category (e.g. Biryani)">
+      </div>
+      <input id="m-image" class="input" placeholder="Image URL (optional)">
+      <div>
+        <label class="text-sm font-medium block mb-1">Or upload a photo</label>
+        <input id="m-photo" type="file" accept="image/*"
+               class="block w-full text-sm text-muted file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:font-semibold file:cursor-pointer">
+      </div>
+      <label class="flex items-center gap-2 text-sm font-medium">
+        <input id="m-veg" type="checkbox" class="w-4 h-4 accent-green-600" checked> Veg dish
+      </label>
+      <div class="flex gap-2 pt-1">
+        <button class="btn-brand flex-1" onclick="saveDish()">Save</button>
+        <button class="px-4 py-2 rounded-xl surface font-medium" onclick="closeMenuModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+requireAdmin();   // only admins may see this page
+
+const STATUSES = ["placed", "preparing", "on_the_way", "delivered", "cancelled"];
+let chart = null;
+
+/** Stat cards + top-dishes chart from GET /api/admin/stats */
+async function init() {
+  const wrap = document.getElementById("stats");
+  try {
+    const s = await apiFetch("/admin/stats", { auth: true });
+    const cards = [
+      ["📦", "Orders", s.orders ?? s.totalOrders ?? 0],
+      ["💰", "Revenue", inr(s.revenue ?? s.totalRevenue ?? 0)],
+      ["👥", "Users", s.users ?? s.totalUsers ?? 0],
+      ["🏪", "Restaurants", s.restaurants ?? s.totalRestaurants ?? 0],
+    ];
+    wrap.innerHTML = cards.map(([icon, label, val]) => `
+      <div class="surface rounded-2xl p-5" style="box-shadow:var(--shadow)">
+        <div class="text-3xl mb-2">${icon}</div>
+        <p class="font-display font-bold text-2xl">${val}</p>
+        <p class="text-sm text-muted">${label}</p>
+      </div>`).join("");
+
+    // top-dishes bar chart (accepts a few backend shapes)
+    const top = s.topDishes || s.popularDishes || [];
+    drawChart(top);
+  } catch (e) {
+    wrap.innerHTML = `<p class="col-span-full text-muted text-sm">Could not load stats: ${esc(e.message)}</p>`;
+  }
+
+  await loadRestaurantsForMenu();
+  await loadOrders();
+}
+
+/** Chart.js horizontal bar chart of top dishes */
+function drawChart(top) {
+  const ctx = document.getElementById("dish-chart");
+  if (chart) chart.destroy();
+  const labels = top.map(d => d.name || d.dishName || "Dish").slice(0, 8);
+  const counts = top.map(d => d.count || d.orders || d.qty || 0).slice(0, 8);
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels.length ? labels : ["No data"],
+      datasets: [{
+        label: "Orders",
+        data: counts.length ? counts : [0],
+        backgroundColor: "#f97316",
+        borderRadius: 8,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+    },
+  });
+}
+
+/* ---------------- Menu manager ---------------- */
+
+async function loadRestaurantsForMenu() {
+  const sel = document.getElementById("menu-rest");
+  const data = await apiFetch("/restaurants");
+  const list = data.restaurants || data || [];
+  sel.innerHTML = list.map(r => `<option value="${r._id || r.id}">${esc(r.name)}</option>`).join("");
+  if (list.length) loadMenu();
+}
+
+async function loadMenu() {
+  const rid = document.getElementById("menu-rest").value;
+  const wrap = document.getElementById("menu-list");
+  if (!rid) { wrap.innerHTML = ""; return; }
+  wrap.innerHTML = skeletonLines(3);
+  try {
+    const data = await apiFetch("/restaurants/" + rid + "/menu");
+    const menu = data.menu || data || [];
+    if (!menu.length) { wrap.innerHTML = `<p class="text-sm text-muted">No dishes yet.</p>`; return; }
+    wrap.innerHTML = menu.map(m => {
+      const id = m._id || m.id;
+      return `<div class="surface rounded-xl p-2 flex items-center gap-3">
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-sm truncate">${esc(m.name)}</p>
+          <p class="text-xs text-muted">${esc(m.category || "")} • ${inr(m.price)}</p>
+        </div>
+        <button class="text-sm font-semibold px-3 py-1 rounded-lg surface hover:opacity-80" onclick='openMenuModal(${JSON.stringify(id)})'>Edit</button>
+        <button class="text-sm font-semibold px-3 py-1 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick='deleteDish(${JSON.stringify(id)})'>Delete</button>
+      </div>`;
+    }).join("");
+    // cache for the edit modal
+    window.__menu = menu;
+  } catch (e) {
+    wrap.innerHTML = `<p class="text-sm" style="color:var(--danger)">${esc(e.message)}</p>`;
+  }
+}
+
+function openMenuModal(id) {
+  document.getElementById("menu-modal").classList.remove("hidden");
+  const m = id ? (window.__menu || []).find(x => String(x._id || x.id) === String(id)) : null;
+  document.getElementById("modal-title").textContent = m ? "Edit Dish" : "Add Dish";
+  document.getElementById("m-id").value = m ? (m._id || m.id) : "";
+  document.getElementById("m-name").value = m ? m.name : "";
+  document.getElementById("m-desc").value = m ? (m.description || "") : "";
+  document.getElementById("m-price").value = m ? m.price : "";
+  document.getElementById("m-category").value = m ? (m.category || "") : "";
+  document.getElementById("m-image").value = m ? (m.image || "") : "";
+  document.getElementById("m-veg").checked = m ? !!(m.veg ?? m.isVeg) : true;
+}
+
+function closeMenuModal() {
+  document.getElementById("menu-modal").classList.add("hidden");
+}
+
+/**
+ * POST /api/admin/menu (add) or PUT /api/admin/menu/:id (edit).
+ * The backend uses multer ("image" file field), so we send FormData —
+ * text fields plus an optional uploaded photo. Never set Content-Type
+ * manually here: the browser adds the multipart boundary itself.
+ */
+async function saveDish() {
+  const id = document.getElementById("m-id").value;
+  const rid = document.getElementById("menu-rest").value;
+  const name = document.getElementById("m-name").value.trim();
+  const price = document.getElementById("m-price").value;
+  if (!name || !price) return toast("Name and price are required.", "error");
+
+  const fd = new FormData();
+  fd.append("restaurantId", rid);
+  fd.append("name", name);
+  fd.append("description", document.getElementById("m-desc").value.trim());
+  fd.append("price", price);
+  fd.append("category", document.getElementById("m-category").value.trim() || "Popular");
+  fd.append("image", document.getElementById("m-image").value.trim());
+  fd.append("veg", document.getElementById("m-veg").checked ? "true" : "false");
+  const photo = document.getElementById("m-photo").files[0];
+  if (photo) fd.append("image", photo);   // multer picks up the file
+
+  try {
+    const res = await fetch(API_BASE + (id ? "/admin/menu/" + id : "/admin/menu"), {
+      method: id ? "PUT" : "POST",
+      headers: { "Authorization": "Bearer " + localStorage.getItem("fh_token") },
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || ("Save failed (" + res.status + ")"));
+    toast("Dish saved!", "success");
+    closeMenuModal();
+    document.getElementById("m-photo").value = "";
+    loadMenu();
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+/** DELETE /api/admin/menu/:id */
+async function deleteDish(id) {
+  if (!confirm("Delete this dish?")) return;
+  try {
+    await apiFetch("/admin/menu/" + id, { method: "DELETE", auth: true });
+    toast("Dish deleted.", "success");
+    loadMenu();
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+/* ---------------- Orders manager ---------------- */
+
+/** GET /api/admin/orders + status dropdown per order (PATCH /api/orders/:id/status) */
+async function loadOrders() {
+  const body = document.getElementById("orders-body");
+  body.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-muted">Loading…</td></tr>`;
+  try {
+    const data = await apiFetch("/admin/orders", { auth: true });
+    const list = data.orders || data || [];
+    if (!list.length) {
+      body.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-muted">No orders yet.</td></tr>`;
+      return;
+    }
+    body.innerHTML = list.map(o => {
+      const id = o._id || o.id;
+      const key = String(o.status || "").toLowerCase().replace(/[\s-]+/g, "_");
+      const cust = o.customerName || (o.user && o.user.name) || (o.address && o.address.name) || "—";
+      const n = (o.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+      return `<tr class="border-b" style="border-color:var(--border)">
+        <td class="py-2 pr-3 font-medium">#${String(id).slice(-8).toUpperCase()}<br>
+          <span class="text-xs text-muted">${new Date(o.createdAt || Date.now()).toLocaleDateString("en-IN")}</span></td>
+        <td class="py-2 pr-3">${esc(cust)}</td>
+        <td class="py-2 pr-3">${n}</td>
+        <td class="py-2 pr-3 font-semibold">${inr(o.total ?? o.totalAmount ?? 0)}</td>
+        <td class="py-2 pr-3">
+          <select class="input !w-auto !py-1 text-sm" onchange="setOrderStatus('${id}', this.value)">
+            ${STATUSES.map(s => `<option value="${s}" ${s === key ? "selected" : ""}>${s.replace(/_/g, " ")}</option>`).join("")}
+          </select>
+        </td></tr>`;
+    }).join("");
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="5" class="py-6 text-center" style="color:var(--danger)">${esc(e.message)}</td></tr>`;
+  }
+}
+
+async function setOrderStatus(id, status) {
+  try {
+    await apiFetch("/orders/" + id + "/status", {
+      method: "PATCH", auth: true, body: { status },
+    });
+    toast("Order status updated.", "success");
+  } catch (e) {
+    toast(e.message, "error");
+    loadOrders();   // refresh dropdown to the real value
+  }
+}
+
+initCommon();
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Restaurant</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-5xl mx-auto px-4 py-6">
+  <div id="header"></div>
+
+  <!-- Menu controls: veg-only toggle -->
+  <div class="flex items-center justify-between mt-8 mb-4">
+    <h2 class="font-display font-bold text-xl">Menu</h2>
+    <label class="flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
+      <input type="checkbox" id="veg-only" class="w-4 h-4 accent-green-600" onchange="renderMenu()">
+      <span class="veg-mark"></span> Veg only
+    </label>
+  </div>
+  <div id="menu"></div>
+
+  <!-- Reviews -->
+  <h2 class="font-display font-bold text-xl mt-10 mb-4">Reviews</h2>
+  <div id="reviews" class="space-y-3 mb-6"></div>
+
+  <div id="review-form-wrap" class="surface rounded-2xl p-5" style="box-shadow:var(--shadow)">
+    <h3 class="font-display font-semibold mb-3">Write a review</h3>
+    <div id="review-form"></div>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+const RID = getParam("id");          // restaurant id from ?id=
+let RESTAURANT = null;               // full restaurant object
+let MENU = [];                       // all menu items
+
+/** Load restaurant (with embedded menu) then render everything */
+async function init() {
+  if (!RID) { location.href = "index.html"; return; }
+  try {
+    const data = await apiFetch("/restaurants/" + RID);
+    RESTAURANT = data.restaurant || data;
+    MENU = data.menu || RESTAURANT.menu || [];
+    document.title = "FoodHub — " + RESTAURANT.name;
+    renderHeader();
+    renderMenu();
+    loadReviews();
+    renderReviewForm();
+  } catch (e) {
+    document.getElementById("header").innerHTML =
+      `<div class="text-center py-20 text-muted"><div class="text-5xl mb-3">⚠️</div><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderHeader() {
+  const r = RESTAURANT;
+  const fav = Favs.isFav("restaurants", r._id || r.id);
+  document.getElementById("header").innerHTML = `
+    <div class="surface rounded-2xl overflow-hidden" style="box-shadow:var(--shadow)">
+      ${r.image ? `<img src="${esc(imgUrl(r.image))}" onerror="imgFallback(this)" class="w-full h-52 md:h-64 object-cover" alt="">`
+                : `<div class="w-full h-52 md:h-64 img-fallback">🍽️</div>`}
+      <div class="p-5 flex items-start justify-between gap-3">
+        <div>
+          <h1 class="font-display font-bold text-2xl">${esc(r.name)}</h1>
+          <p class="text-sm text-muted mt-1">${esc(r.cuisine || "")}</p>
+          <p class="text-sm text-muted mt-1">📍 ${esc(r.address || "")}</p>
+          <div class="flex gap-4 mt-3 text-sm">
+            <span class="font-bold px-2 py-1 rounded-lg text-white" style="background:var(--success)">⭐ ${r.rating || "New"}</span>
+            <span>🕒 ${esc(r.deliveryTime || "30-40 min")}</span>
+            <span>🛵 ${r.deliveryFee ? inr(r.deliveryFee) : "Free delivery"}</span>
+          </div>
+        </div>
+        <button onclick="toggleFavRestaurant()" class="text-3xl" title="Save to favorites">${fav ? "❤️" : "🤍"}</button>
+      </div>
+    </div>`;
+}
+
+function toggleFavRestaurant() {
+  const nowFav = Favs.toggle("restaurants", {
+    _id: RESTAURANT._id || RESTAURANT.id,
+    name: RESTAURANT.name,
+    image: RESTAURANT.image,
+    rating: RESTAURANT.rating,
+    deliveryTime: RESTAURANT.deliveryTime,
+  });
+  toast(nowFav ? "Saved to favorites ❤️" : "Removed from favorites", "success");
+  renderHeader();
+}
+
+/** Group menu by category, apply veg filter, render ADD buttons / steppers */
+function renderMenu() {
+  const vegOnly = document.getElementById("veg-only").checked;
+  const items = MENU.filter(i => !vegOnly || i.veg || i.isVeg);
+  const wrap = document.getElementById("menu");
+
+  if (items.length === 0) {
+    wrap.innerHTML = `<div class="text-center py-16 text-muted"><div class="text-5xl mb-3">🍽️</div><p>No dishes found.</p></div>`;
+    return;
+  }
+
+  // group by category, preserving order
+  const groups = {};
+  items.forEach(i => { (groups[i.category || "Popular"] ||= []).push(i); });
+
+  wrap.innerHTML = Object.keys(groups).map(cat => `
+    <h3 class="font-display font-semibold text-lg mt-6 mb-3">${esc(cat)} <span class="text-sm text-muted font-normal">(${groups[cat].length})</span></h3>
+    <div class="space-y-3">${groups[cat].map(menuItem).join("")}</div>
+  `).join("");
+}
+
+/** One menu row: image, name, desc, price, ADD button or stepper, heart */
+function menuItem(i) {
+  const id = i._id || i.id;
+  const cart = Cart.get();
+  const qty = cart && cart.items[String(id)] ? cart.items[String(id)].qty : 0;
+  const veg = i.veg ?? i.isVeg ?? true;
+  const fav = Favs.isFav("dishes", id);
+
+  const action = qty === 0
+    ? `<button class="btn-brand !py-2 !px-5 text-sm" onclick='addDish(${JSON.stringify(id)})'>ADD +</button>`
+    : `<div class="flex items-center gap-2">
+         <span class="stepper-btn" onclick='setDishQty(${JSON.stringify(id)}, ${qty - 1})'>−</span>
+         <span class="font-bold w-5 text-center">${qty}</span>
+         <span class="stepper-btn" onclick='setDishQty(${JSON.stringify(id)}, ${qty + 1})'>+</span>
+       </div>`;
+
+  return `<div class="surface rounded-2xl p-3 flex gap-4 items-center">
+    ${i.image ? `<img src="${esc(imgUrl(i.image))}" onerror="imgFallback(this)" class="w-20 h-20 rounded-xl object-cover flex-shrink-0" alt="">`
+              : `<div class="w-20 h-20 rounded-xl img-fallback flex-shrink-0 !text-2xl">🍽️</div>`}
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2">
+        <span class="veg-mark ${veg ? "" : "nonveg"}"></span>
+        <p class="font-semibold truncate">${esc(i.name)}</p>
+      </div>
+      <p class="text-sm text-muted line-clamp-2">${esc(i.description || "")}</p>
+      <p class="font-bold mt-1" style="color:var(--brand-dark)">${inr(i.price)}</p>
+    </div>
+    <div class="flex flex-col items-center gap-2">
+      <button onclick='toggleFavDish(${JSON.stringify(id)})' class="text-xl" title="Save dish">${fav ? "❤️" : "🤍"}</button>
+      ${action}
+    </div>
+  </div>`;
+}
+
+/** ADD button handler: respects the one-restaurant-per-cart rule */
+function addDish(id) {
+  const item = MENU.find(i => String(i._id || i.id) === String(id));
+  if (!item) return;
+  if (Cart.add(RESTAURANT._id || RESTAURANT.id, item)) {
+    toast(item.name + " added to cart", "success");
+    renderMenu();
+  }
+}
+
+function setDishQty(id, qty) {
+  Cart.setQty(id, qty);
+  renderMenu();
+}
+
+function toggleFavDish(id) {
+  const item = MENU.find(i => String(i._id || i.id) === String(id));
+  if (!item) return;
+  const nowFav = Favs.toggle("dishes", {
+    _id: item._id || item.id,
+    name: item.name,
+    price: item.price,
+    image: item.image,
+    restaurantId: RESTAURANT._id || RESTAURANT.id,
+    restaurantName: RESTAURANT.name,
+  });
+  toast(nowFav ? "Dish saved ❤️" : "Removed from favorites", "success");
+  renderMenu();
+}
+
+/* ---------------- Reviews ---------------- */
+
+async function loadReviews() {
+  const wrap = document.getElementById("reviews");
+  wrap.innerHTML = skeletonLines(3);
+  try {
+    const data = await apiFetch("/restaurants/" + RID + "/reviews");
+    const list = data.reviews || data || [];
+    if (list.length === 0) {
+      wrap.innerHTML = `<p class="text-muted text-sm">No reviews yet — be the first!</p>`;
+      return;
+    }
+    wrap.innerHTML = list.map(r => `
+      <div class="surface rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+          <p class="font-semibold text-sm">${esc(r.userName || r.user?.name || "Customer")}</p>
+          <span class="text-xs font-bold px-2 py-0.5 rounded-lg text-white" style="background:var(--success)">⭐ ${r.rating}/5</span>
+        </div>
+        <p class="text-sm mt-1">${esc(r.comment)}</p>
+        <p class="text-xs text-muted mt-1">${new Date(r.createdAt || Date.now()).toLocaleDateString("en-IN")}</p>
+      </div>`).join("");
+  } catch (e) {
+    wrap.innerHTML = `<p class="text-muted text-sm">Could not load reviews.</p>`;
+  }
+}
+
+function renderReviewForm() {
+  const wrap = document.getElementById("review-form");
+  if (!isLoggedIn()) {
+    wrap.innerHTML = `<p class="text-sm text-muted"><a href="login.html?next=${encodeURIComponent("restaurant.html?id=" + RID)}" class="font-semibold" style="color:var(--brand-dark)">Log in</a> to write a review.</p>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="flex gap-2 mb-3">
+      <select id="rev-rating" class="input !w-auto">
+        <option value="5">⭐ 5 — Excellent</option>
+        <option value="4">⭐ 4 — Good</option>
+        <option value="3">⭐ 3 — Average</option>
+        <option value="2">⭐ 2 — Poor</option>
+        <option value="1">⭐ 1 — Terrible</option>
+      </select>
+    </div>
+    <textarea id="rev-comment" rows="3" class="input mb-3" placeholder="How was the food?"></textarea>
+    <button class="btn-brand" onclick="submitReview()">Submit Review</button>`;
+}
+
+async function submitReview() {
+  const rating = Number(document.getElementById("rev-rating").value);
+  const comment = document.getElementById("rev-comment").value.trim();
+  if (!comment) return toast("Please write something first.", "error");
+  try {
+    await apiFetch("/restaurants/" + RID + "/reviews", {
+      method: "POST", auth: true, body: { rating, comment },
+    });
+    toast("Review posted!", "success");
+    loadReviews();
+    renderReviewForm();
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+initCommon();
+init();
+</script>
+</body>
+</html>

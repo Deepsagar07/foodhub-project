@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Checkout</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-3xl mx-auto px-4 py-6">
+  <h1 class="font-display font-bold text-2xl mb-5">Checkout</h1>
+
+  <div class="grid md:grid-cols-2 gap-5">
+    <div class="space-y-5">
+      <!-- Delivery address -->
+      <section class="surface rounded-2xl p-5" style="box-shadow:var(--shadow)">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-semibold">📍 Delivery Address</h2>
+          <button type="button" onclick="useMyLocation()" class="text-sm font-medium px-3 py-1.5 rounded-xl surface hover:opacity-80">📌 Use my location</button>
+        </div>
+        <div class="space-y-3">
+          <input id="f-name" class="input" placeholder="Full name">
+          <input id="f-phone" class="input" placeholder="Phone (10 digits)" maxlength="10" inputmode="numeric">
+          <textarea id="f-street" class="input" rows="2" placeholder="Flat / street / landmark"></textarea>
+          <div class="grid grid-cols-2 gap-3">
+            <input id="f-city" class="input" placeholder="City">
+            <input id="f-pincode" class="input" placeholder="Pincode" maxlength="6" inputmode="numeric">
+          </div>
+        </div>
+      </section>
+
+      <!-- Payment method (mock — no real gateway in this build) -->
+      <section class="surface rounded-2xl p-5" style="box-shadow:var(--shadow)">
+        <h2 class="font-display font-semibold mb-3">💳 Payment Method</h2>
+        <div class="space-y-2 text-sm font-medium">
+          <label class="surface rounded-xl p-3 flex items-center gap-3 cursor-pointer">
+            <input type="radio" name="pay" value="upi" class="w-4 h-4 accent-orange-500" checked>
+            <span>📱 UPI <span class="text-xs text-muted">(mock)</span></span>
+          </label>
+          <label class="surface rounded-xl p-3 flex items-center gap-3 cursor-pointer">
+            <input type="radio" name="pay" value="card" class="w-4 h-4 accent-orange-500">
+            <span>💳 Card <span class="text-xs text-muted">(mock)</span></span>
+          </label>
+          <label class="surface rounded-xl p-3 flex items-center gap-3 cursor-pointer">
+            <input type="radio" name="pay" value="cod" class="w-4 h-4 accent-orange-500">
+            <span>💵 Cash on Delivery</span>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <!-- Order summary -->
+    <section class="surface rounded-2xl p-5 h-fit" style="box-shadow:var(--shadow)">
+      <h2 class="font-display font-semibold mb-3">Order Summary</h2>
+      <div id="summary" class="space-y-2 text-sm mb-4"></div>
+      <div id="bill" class="space-y-2 text-sm pt-3 border-t" style="border-color:var(--border)"></div>
+      <button id="place-btn" class="btn-brand w-full mt-5" onclick="placeOrder()">Place Order</button>
+      <p class="text-xs text-muted text-center mt-2">Payment is simulated in this demo build.</p>
+    </section>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+requireAuth();   // must be logged in to check out
+
+let RESTAURANT = null;
+let coupon = null;
+try { coupon = JSON.parse(localStorage.getItem("fh_coupon")) || null; } catch (e) { coupon = null; }
+
+async function init() {
+  const c = Cart.get();
+  if (!c || Object.keys(c.items).length === 0) {
+    location.href = "cart.html";   // nothing to check out
+    return;
+  }
+  // prefill name from profile
+  const u = currentUser();
+  if (u && u.name) document.getElementById("f-name").value = u.name;
+
+  try {
+    const data = await apiFetch("/restaurants/" + c.restaurantId);
+    RESTAURANT = data.restaurant || data;
+  } catch (e) { /* fee falls back below */ }
+
+  renderSummary();
+}
+
+function renderSummary() {
+  const items = Object.values(Cart.get().items);
+  document.getElementById("summary").innerHTML = items.map(i =>
+    `<div class="flex justify-between gap-2"><span class="text-muted">${esc(i.name)} × ${i.qty}</span><span>${inr(i.price * i.qty)}</span></div>`
+  ).join("");
+
+  const subtotal = Cart.subtotal();
+  const discount = coupon ? Math.min(coupon.discount, subtotal) : 0;
+  let fee = RESTAURANT && RESTAURANT.deliveryFee != null ? Number(RESTAURANT.deliveryFee) : 30;
+  if (coupon && coupon.freeDelivery) fee = 0;
+  const total = Math.max(0, subtotal - discount + fee);
+
+  document.getElementById("bill").innerHTML = `
+    <div class="flex justify-between"><span class="text-muted">Subtotal</span><span>${inr(subtotal)}</span></div>
+    <div class="flex justify-between"><span class="text-muted">Discount</span><span style="color:var(--success)">− ${inr(discount)}</span></div>
+    <div class="flex justify-between"><span class="text-muted">Delivery fee</span><span>${fee === 0 ? "Free" : inr(fee)}</span></div>
+    <div class="flex justify-between font-display font-bold text-lg"><span>To Pay</span><span>${inr(total)}</span></div>`;
+  window.__bill = { subtotal, discount, fee, total };
+}
+
+/** Fill city/pincode from the detected GPS location */
+async function useMyLocation() {
+  toast("Detecting your location…");
+  await detectLocation();   // from js/common.js — asks GPS permission, saves to localStorage
+  const loc = getSavedLocation();
+  if (!loc) return;   // permission denied or lookup failed (toast already shown)
+  if (loc.city) document.getElementById("f-city").value = loc.city;
+  if (loc.pincode) document.getElementById("f-pincode").value = loc.pincode;
+  const street = document.getElementById("f-street");
+  if (loc.area && !street.value.trim()) street.value = loc.area;
+}
+
+/** Validate form, POST /api/orders, clear cart, go to tracking page */
+async function placeOrder() {
+  const name = document.getElementById("f-name").value.trim();
+  const phone = document.getElementById("f-phone").value.trim();
+  const street = document.getElementById("f-street").value.trim();
+  const city = document.getElementById("f-city").value.trim();
+  const pincode = document.getElementById("f-pincode").value.trim();
+
+  if (!name || !street || !city) return toast("Please fill name, street and city.", "error");
+  if (!/^\d{10}$/.test(phone)) return toast("Enter a valid 10-digit phone number.", "error");
+  if (!/^\d{6}$/.test(pincode)) return toast("Enter a valid 6-digit pincode.", "error");
+
+  const paymentMethod = document.querySelector('input[name="pay"]:checked').value;
+  const c = Cart.get();
+  const btn = document.getElementById("place-btn");
+  btn.disabled = true;
+  btn.textContent = "Placing order…";
+
+  try {
+    // Backend stores address as one string, so format it here
+    const addressStr = `${name}, ${street}, ${city} - ${pincode}, Phone: ${phone}`;
+    const data = await apiFetch("/orders", {
+      method: "POST",
+      auth: true,
+      body: {
+        restaurantId: c.restaurantId,
+        items: Object.values(c.items).map(i => ({ menuItemId: i._id, qty: i.qty })),
+        address: addressStr,
+        couponCode: coupon ? coupon.code : undefined,
+        paymentMethod,   // "upi" | "card" | "cod" (backend enum)
+      },
+    });
+    const orderId = (data.order && (data.order._id || data.order.id)) || data._id || data.id || data.orderId;
+    Cart.clear();
+    localStorage.removeItem("fh_coupon");
+    toast("Order placed! 🎉", "success");
+    location.href = "track.html?id=" + orderId;
+  } catch (e) {
+    toast(e.message, "error");
+    btn.disabled = false;
+    btn.textContent = "Place Order";
+  }
+}
+
+initCommon();
+init();
+</script>
+</body>
+</html>

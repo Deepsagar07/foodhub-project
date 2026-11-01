@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Track Order</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-2xl mx-auto px-4 py-6">
+  <h1 class="font-display font-bold text-2xl mb-1">Track your order</h1>
+  <p id="order-id" class="text-sm text-muted mb-6"></p>
+
+  <div id="content"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+requireAuth();
+
+const OID = getParam("id");
+let timer = null;
+
+/* The 4 tracking stages. Backend status strings are normalized to these keys. */
+const STEPS = [
+  { key: "placed",     label: "Order placed",  icon: "🧾" },
+  { key: "preparing",  label: "Preparing",     icon: "👨‍🍳" },
+  { key: "on_the_way", label: "On the way",    icon: "🛵" },
+  { key: "delivered",  label: "Delivered",     icon: "✅" },
+];
+
+/** "On the way" / "on-the-way" / "On The Way" -> "on_the_way" */
+function normStatus(s) {
+  return String(s || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+}
+
+function fmtTime(t) {
+  if (!t) return "";
+  return new Date(t).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+}
+
+async function load() {
+  const wrap = document.getElementById("content");
+  try {
+    const data = await apiFetch("/orders/" + OID, { auth: true });
+    const o = data.order || data;
+    render(o);
+  } catch (e) {
+    clearInterval(timer);
+    wrap.innerHTML = `<div class="text-center py-20 text-muted"><div class="text-5xl mb-3">⚠️</div><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function render(o) {
+  document.getElementById("order-id").textContent = "Order #" + String(o._id || o.id).slice(-8).toUpperCase();
+  const wrap = document.getElementById("content");
+  const status = normStatus(o.status);
+  const history = o.statusHistory || o.timeline || {};   // optional per-stage timestamps
+
+  if (status === "cancelled") {
+    wrap.innerHTML = `<div class="surface rounded-2xl p-8 text-center">
+      <div class="text-5xl mb-3">❌</div>
+      <h2 class="font-display font-bold text-xl mb-2">Order cancelled</h2>
+      <p class="text-muted text-sm">This order was cancelled. Your money (if paid) will be refunded.</p>
+      <a href="index.html" class="btn-brand inline-block mt-5">Order Again</a></div>`;
+    clearInterval(timer);
+    return;
+  }
+
+  const currentIdx = Math.max(0, STEPS.findIndex(s => s.key === status));
+
+  const timeline = STEPS.map((s, i) => {
+    const cls = i < currentIdx ? "done" : (i === currentIdx ? "active" : "");
+    const ts = history[s.key] || (s.key === "placed" ? o.createdAt : null);
+    return `<div class="timeline-step ${cls}">
+      <div class="timeline-dot">${i < currentIdx ? "✓" : s.icon}</div>
+      <p class="font-semibold">${s.label}</p>
+      <p class="text-xs text-muted">${ts ? fmtTime(ts) : (i === currentIdx ? "In progress…" : "Pending")}</p>
+    </div>`;
+  }).join("");
+
+  const items = (o.items || []).map(i =>
+    `<div class="flex justify-between text-sm"><span class="text-muted">${esc(i.name || "Item")} × ${i.qty}</span><span>${i.price ? inr(i.price * i.qty) : ""}</span></div>`
+  ).join("");
+
+  const restName = o.restaurantName || (o.restaurant && o.restaurant.name) || "";
+
+  wrap.innerHTML = `
+    <div class="surface rounded-2xl p-6 mb-5" style="box-shadow:var(--shadow)">
+      <div class="flex items-center justify-between mb-5">
+        <div><p class="font-display font-semibold text-lg">${esc(restName)}</p>
+        <p class="text-sm text-muted">${inr(o.total ?? o.totalAmount ?? 0)} • ${esc(o.paymentMethod || "")}</p></div>
+        ${status === "placed" ? `<button class="text-sm font-medium px-4 py-2 rounded-xl surface hover:opacity-80" style="color:var(--danger)" onclick="cancelOrder()">Cancel order</button>` : ""}
+      </div>
+      ${timeline}
+    </div>
+    <div class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
+      <h3 class="font-display font-semibold mb-3">Items</h3>
+      <div class="space-y-2">${items || '<p class="text-sm text-muted">No item details.</p>'}</div>
+      <p class="text-sm text-muted mt-4">📍 Delivering to: ${esc(formatAddress(o.address))}</p>
+    </div>
+    <p class="text-xs text-muted text-center mt-4">Auto-refreshes every 10 seconds</p>`;
+
+  // stop polling once delivered
+  if (status === "delivered") clearInterval(timer);
+}
+
+function formatAddress(a) {
+  if (!a) return "—";
+  if (typeof a === "string") return a;
+  return [a.street, a.city, a.pincode].filter(Boolean).join(", ");
+}
+
+/** Cancel is only offered while the order is still "placed".
+    Note: the backend restricts PATCH /orders/:id/status to admins,
+    so a customer sees a friendly message instead of a raw error. */
+async function cancelOrder() {
+  if (!confirm("Cancel this order?")) return;
+  try {
+    await apiFetch("/orders/" + OID + "/status", {
+      method: "PATCH", auth: true, body: { status: "cancelled" },
+    });
+    toast("Order cancelled.", "success");
+    load();
+  } catch (e) {
+    if (/forbidden|admin/i.test(e.message)) {
+      toast("Only the restaurant can cancel orders — please contact support.", "error");
+    } else {
+      toast(e.message, "error");
+    }
+  }
+}
+
+initCommon();
+if (!OID) {
+  location.href = "orders.html";
+} else {
+  document.getElementById("content").innerHTML = skeletonLines(5);
+  load();
+  timer = setInterval(load, 10000);   // live tracking: refresh every 10s
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Help & FAQs</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-3xl mx-auto px-4 py-8">
+  <h1 class="font-display font-bold text-2xl mb-1">❓ Help & FAQs</h1>
+  <p class="text-sm text-muted mb-6">Everything you need to know about ordering with FoodHub.</p>
+
+  <div id="faq" class="space-y-3"></div>
+
+  <section id="contact" class="surface rounded-2xl p-6 mt-10" style="box-shadow:var(--shadow)">
+    <h2 class="font-display font-semibold text-lg mb-3">📞 Still need help?</h2>
+    <div class="text-sm text-muted space-y-2">
+      <p>📧 Email: <span class="font-medium">hello@foodhub.in</span></p>
+      <p>📞 Toll-free: <span class="font-medium">1800-419-0000</span> (9 AM – 11 PM)</p>
+      <p>📍 FoodHub, Dehradun, India</p>
+    </div>
+  </section>
+
+  <section class="surface rounded-2xl p-6 mt-6" style="box-shadow:var(--shadow)">
+    <h2 class="font-display font-semibold text-lg mb-2">ℹ️ About FoodHub</h2>
+    <p class="text-sm text-muted">FoodHub is a full-stack food ordering web app built as a Frontend Engineering
+      course project — HTML, CSS and JavaScript on the frontend, Node.js (Express) powering REST APIs,
+      MongoDB storing users, restaurants, menus and orders, all tied together with clean application design.</p>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+const FAQS = [
+  ["How do I place an order?", "Browse restaurants on the home page, open one, add dishes to your cart with the ADD button, apply a coupon from the Offers page if you have one, then check out with your delivery address. You'll get a live tracking page right after."],
+  ["How can I track my order?", "After placing an order you'll land on a tracking page that refreshes every 10 seconds: Placed → Preparing → On the way → Delivered. You can also find all orders under 📦 My Orders in the profile menu."],
+  ["Which payment methods are supported?", "UPI, Card and Cash on Delivery. In this demo build payments are simulated — no real money moves."],
+  ["How do coupons work?", "Open the Offers page, copy a code (e.g. WELCOME50), and paste it in the coupon box on your cart page before checkout. The discount is calculated by the server, so it can't be tampered with."],
+  ["Can I cancel my order?", "Orders can be cancelled while the status is still “Placed”. Open the tracking page for that order and hit Cancel."],
+  ["I want to reorder my favourite meal.", "Go to My Orders and press “Reorder” on any past order — the same items go straight back into your cart."],
+  ["How do I list my restaurant / manage the menu?", "Log in with an admin account (admin@foodhub.in) and open the Admin Dashboard from the profile menu to add dishes, update prices and change order statuses."],
+];
+
+document.getElementById("faq").innerHTML = FAQS.map((f, i) =>
+  `<div class="surface rounded-2xl overflow-hidden" style="box-shadow:var(--shadow)">
+    <button onclick="document.getElementById('a${i}').classList.toggle('hidden');this.querySelector('span:last-child').textContent = document.getElementById('a${i}').classList.contains('hidden') ? '+' : '−';"
+      class="w-full flex items-center justify-between gap-3 px-5 py-4 text-left font-medium">
+      <span>${f[0]}</span><span class="text-xl font-bold" style="color:var(--brand)">+</span>
+    </button>
+    <div id="a${i}" class="hidden px-5 pb-4 text-sm text-muted">${f[1]}</div>
+  </div>`
+).join("");
+
+initCommon();
+</script>
+</body>
+</html>

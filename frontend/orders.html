@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — My Orders</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-3xl mx-auto px-4 py-6">
+  <h1 class="font-display font-bold text-2xl mb-5">My Orders</h1>
+  <div id="list" class="space-y-4"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+requireAuth();
+
+const STATUS_STYLE = {
+  placed: "background:#fef3c7;color:#92400e",
+  preparing: "background:#dbeafe;color:#1e40af",
+  on_the_way: "background:#e0e7ff;color:#3730a3",
+  delivered: "background:#dcfce7;color:#166534",
+  cancelled: "background:#fee2e2;color:#991b1b",
+};
+
+function statusKey(s) {
+  return String(s || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+}
+
+async function init() {
+  const wrap = document.getElementById("list");
+  wrap.innerHTML = skeletonLines(4);
+  try {
+    const data = await apiFetch("/orders", { auth: true });
+    const list = data.orders || data || [];
+    if (list.length === 0) {
+      wrap.innerHTML = `<div class="text-center py-20 text-muted"><div class="text-6xl mb-4">📦</div>
+        <p class="mb-4">No orders yet. Hungry?</p>
+        <a href="index.html" class="btn-brand inline-block">Order Now</a></div>`;
+      return;
+    }
+    wrap.innerHTML = list.map(orderCard).join("");
+  } catch (e) {
+    wrap.innerHTML = `<div class="text-center py-20 text-muted"><div class="text-5xl mb-3">⚠️</div><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function orderCard(o) {
+  const id = o._id || o.id;
+  const key = statusKey(o.status);
+  const style = STATUS_STYLE[key] || "background:var(--border);color:var(--muted)";
+  const items = (o.items || []).slice(0, 3).map(i => `${esc(i.name || "Item")} × ${i.qty}`).join(", ")
+    + ((o.items || []).length > 3 ? "…" : "");
+  const restName = o.restaurantName || (o.restaurant && o.restaurant.name) || "Restaurant";
+  const date = new Date(o.createdAt || Date.now()).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+
+  return `<div class="surface rounded-2xl p-5" style="box-shadow:var(--shadow)">
+    <div class="flex items-start justify-between gap-3 mb-2">
+      <div>
+        <p class="font-display font-semibold">${esc(restName)}</p>
+        <p class="text-xs text-muted">#${String(id).slice(-8).toUpperCase()} • ${date}</p>
+      </div>
+      <span class="text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap" style="${style}">${esc(o.status || "")}</span>
+    </div>
+    <p class="text-sm text-muted mb-3">${items || "—"}</p>
+    <div class="flex items-center justify-between">
+      <p class="font-bold">${inr(o.total ?? o.totalAmount ?? 0)}</p>
+      <div class="flex gap-2">
+        <a href="track.html?id=${id}" class="text-sm font-semibold px-4 py-2 rounded-xl surface hover:opacity-80">Track</a>
+        <button class="text-sm font-semibold px-4 py-2 rounded-xl btn-brand" onclick="reorder('${id}')">🔁 Reorder</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
+ * Reorder: copy the old order's items back into the cart
+ * (fetches full order first so we get restaurantId + menu ids).
+ */
+async function reorder(orderId) {
+  try {
+    const data = await apiFetch("/orders/" + orderId, { auth: true });
+    const o = data.order || data;
+    // backend stores the restaurant as `restaurant` (ObjectId or populated object)
+    const restaurantId = o.restaurantId
+      || (o.restaurant && (o.restaurant._id || o.restaurant.id))
+      || o.restaurant;
+    if (!restaurantId || !(o.items || []).length) return toast("Could not rebuild this order.", "error");
+
+    // fetch menu so cart items carry name/price/image
+    const mdata = await apiFetch("/restaurants/" + restaurantId);
+    const menu = mdata.menu || (mdata.restaurant && mdata.restaurant.menu) || [];
+    const byId = {};
+    menu.forEach(m => { byId[String(m._id || m.id)] = m; });
+
+    let cart = Cart.get();
+    if (cart && cart.restaurantId !== restaurantId) {
+      if (!confirm("Your cart has items from another restaurant. Replace it?")) return;
+      cart = null;
+    }
+    if (!cart) cart = { restaurantId, items: {} };
+
+    o.items.forEach(oi => {
+      // backend snapshots items as { menuItem, name, price, qty }
+      const key = String(oi.menuItemId || oi.menuItem);
+      const m = byId[key];
+      if (!m) return;
+      cart.items[key] = {
+        _id: key, name: m.name, price: Number(m.price) || 0,
+        image: m.image || "", veg: !!(m.veg ?? m.isVeg), qty: (cart.items[key]?.qty || 0) + (oi.qty || 1),
+      };
+    });
+    Cart.save(cart);
+    toast("Items added back to cart!", "success");
+    location.href = "cart.html";
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+initCommon();
+init();
+</script>
+</body>
+</html>

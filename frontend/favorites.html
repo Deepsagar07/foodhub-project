@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Favorites</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-7xl mx-auto px-4 py-6">
+  <h1 class="font-display font-bold text-2xl mb-5">Your Favorites ❤️</h1>
+
+  <h2 class="font-display font-semibold text-lg mb-3">Restaurants</h2>
+  <div id="rest-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-10"></div>
+
+  <h2 class="font-display font-semibold text-lg mb-3">Dishes</h2>
+  <div id="dish-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+  <div id="empty" class="hidden text-center py-16 text-muted">
+    <div class="text-6xl mb-4">🤍</div>
+    <p class="mb-4">Nothing saved yet. Tap the 🤍 on any restaurant or dish!</p>
+    <a href="index.html" class="btn-brand inline-block">Browse Food</a>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+/** Favorites live entirely in localStorage (no login needed) */
+function render() {
+  const f = Favs.get();
+  const rl = document.getElementById("rest-list");
+  const dl = document.getElementById("dish-list");
+
+  document.getElementById("empty").classList.toggle("hidden",
+    f.restaurants.length > 0 || f.dishes.length > 0);
+
+  rl.innerHTML = f.restaurants.length === 0
+    ? `<p class="text-sm text-muted col-span-full">No saved restaurants.</p>`
+    : f.restaurants.map(r => {
+        const id = r._id || r.id;
+        return `<div class="surface rounded-2xl overflow-hidden" style="box-shadow:var(--shadow)">
+          ${r.image ? `<img src="${esc(imgUrl(r.image))}" onerror="imgFallback(this)" class="w-full h-36 object-cover" alt="">`
+                    : `<div class="w-full h-36 img-fallback">🍽️</div>`}
+          <div class="p-4 flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <a href="restaurant.html?id=${id}" class="font-display font-semibold hover:opacity-70 truncate block">${esc(r.name)}</a>
+              <p class="text-xs text-muted">⭐ ${r.rating || "New"} • ${esc(r.deliveryTime || "")}</p>
+            </div>
+            <button onclick="unfav('restaurants','${id}')" class="text-2xl" title="Remove">❤️</button>
+          </div></div>`;
+      }).join("");
+
+  dl.innerHTML = f.dishes.length === 0
+    ? `<p class="text-sm text-muted col-span-full">No saved dishes.</p>`
+    : f.dishes.map(d => {
+        const id = d._id || d.id;
+        return `<div class="surface rounded-2xl p-3 flex gap-3 items-center">
+          ${d.image ? `<img src="${esc(imgUrl(d.image))}" onerror="imgFallback(this)" class="w-16 h-16 rounded-xl object-cover flex-shrink-0" alt="">`
+                    : `<div class="w-16 h-16 rounded-xl img-fallback flex-shrink-0 !text-xl">🍽️</div>`}
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm truncate">${esc(d.name)}</p>
+            <p class="text-xs text-muted truncate">${esc(d.restaurantName || "")}</p>
+            <p class="font-bold text-sm mt-0.5" style="color:var(--brand-dark)">${inr(d.price)}</p>
+          </div>
+          <button onclick="unfav('dishes','${id}')" class="text-2xl" title="Remove">❤️</button>
+        </div>`;
+      }).join("");
+}
+
+function unfav(kind, id) {
+  const f = Favs.get();
+  f[kind] = f[kind].filter(x => String(x._id || x.id) !== String(id));
+  Favs.save(f);
+  render();
+}
+
+initCommon();
+render();
+</script>
+</body>
+</html>

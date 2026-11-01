@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Order Food Online</title>
+<meta name="description" content="FoodHub — Dehradun's own food ordering app. Order delicious food from top restaurants near you.">
+<!-- Apply saved theme before first paint (avoids a flash) -->
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<!-- HERO: big food image + search -->
+<header class="relative overflow-hidden">
+  <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=70"
+       onerror="imgFallback(this)" alt="Delicious food spread"
+       class="w-full h-[300px] md:h-[380px] object-cover">
+  <div class="absolute inset-0 bg-black/55 flex flex-col items-center justify-center px-4 text-center">
+    <h1 class="font-display font-extrabold text-white text-3xl md:text-5xl mb-2">Craving something delicious?</h1>
+    <p class="text-white/85 mb-6 text-sm md:text-lg">Dehradun's favourite restaurants, delivered hot & fast.</p>
+    <div class="w-full max-w-xl flex gap-2">
+      <div id="search-wrap" class="relative flex-1">
+        <input id="search" type="text" placeholder="Search restaurants or dishes…"
+               class="input !bg-white/95 w-full" autocomplete="off">
+        <div id="suggestions" class="hidden absolute top-full mt-2 left-0 right-0 bg-white rounded-xl z-20 overflow-hidden text-left" style="box-shadow:0 8px 30px rgba(0,0,0,.25)"></div>
+      </div>
+      <button onclick="doSearch()" class="btn-brand whitespace-nowrap">Search</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-8">
+  <!-- Food category tiles with photos -->
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-display font-bold text-xl">What's on your mind?</h2>
+    <button id="clear-filter" onclick="setCuisine('All')" class="hidden text-sm font-medium hover:opacity-70" style="color:var(--brand-dark)">Clear filter ✕</button>
+  </div>
+  <div id="tiles" class="grid grid-cols-3 sm:grid-cols-6 gap-4 mb-10"></div>
+
+  <!-- Offer banner carousel -->
+  <section class="mb-10">
+    <div class="overflow-hidden rounded-3xl relative">
+      <div id="banner-track" class="flex transition-transform duration-500">
+        <div class="min-w-full p-8 md:p-10 text-white flex flex-col md:flex-row md:items-center justify-between gap-4" style="background:linear-gradient(135deg,#f97316,#c2410c)">
+          <div>
+            <p class="text-xs font-bold tracking-widest uppercase opacity-80">Limited time</p>
+            <h3 class="font-display font-extrabold text-3xl md:text-4xl mt-1">FLAT 50% OFF</h3>
+            <p class="opacity-90 mt-1 text-sm md:text-base">Up to ₹120 on orders above ₹199</p>
+            <span class="inline-block mt-3 px-3 py-1.5 rounded-lg bg-white/20 font-mono font-bold tracking-widest">WELCOME50</span>
+          </div>
+          <a href="offers.html" class="bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl whitespace-nowrap">Grab Deal →</a>
+        </div>
+        <div class="min-w-full p-8 md:p-10 text-white flex flex-col md:flex-row md:items-center justify-between gap-4" style="background:linear-gradient(135deg,#16a34a,#065f46)">
+          <div>
+            <p class="text-xs font-bold tracking-widest uppercase opacity-80">Everyday saving</p>
+            <h3 class="font-display font-extrabold text-3xl md:text-4xl mt-1">FREE Delivery</h3>
+            <p class="opacity-90 mt-1 text-sm md:text-base">On all orders above ₹149</p>
+            <span class="inline-block mt-3 px-3 py-1.5 rounded-lg bg-white/20 font-mono font-bold tracking-widest">FREEDEL</span>
+          </div>
+          <a href="offers.html" class="bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl whitespace-nowrap">Grab Deal →</a>
+        </div>
+        <div class="min-w-full p-8 md:p-10 text-white flex flex-col md:flex-row md:items-center justify-between gap-4" style="background:linear-gradient(135deg,#7c3aed,#4c1d95)">
+          <div>
+            <p class="text-xs font-bold tracking-widest uppercase opacity-80">FoodHub app</p>
+            <h3 class="font-display font-extrabold text-3xl md:text-4xl mt-1">App-only deals</h3>
+            <p class="opacity-90 mt-1 text-sm md:text-base">Faster checkout & live tracking on the go</p>
+          </div>
+          <a href="#get-app" class="bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl whitespace-nowrap">Get the App →</a>
+        </div>
+      </div>
+      <div id="banner-dots" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2"></div>
+    </div>
+  </section>
+
+  <!-- Restaurant grid -->
+  <div class="flex items-center justify-between gap-3 mb-4">
+    <h2 class="font-display font-bold text-xl"><span id="res-count">0</span> restaurants near you</h2>
+    <select id="sort" onchange="loadRestaurants()" class="input !w-auto text-sm font-medium">
+      <option value="relevance">Sort: Popular</option>
+      <option value="rating">Sort: Rating</option>
+      <option value="fastest">Sort: Fastest delivery</option>
+    </select>
+  </div>
+  <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+  <div id="empty" class="hidden text-center py-16 text-muted">
+    <div class="text-5xl mb-3">🔍</div>
+    <p>No restaurants found. Try another search.</p>
+  </div>
+
+  <!-- Trust stats band -->
+  <section class="mt-12 rounded-3xl p-8 text-white text-center" style="background:linear-gradient(135deg,#1c1917,#57534e)">
+    <div class="grid grid-cols-3 gap-4">
+      <div><p class="font-display font-extrabold text-2xl md:text-4xl">2L+</p><p class="text-white/70 text-xs md:text-sm mt-1">Orders delivered</p></div>
+      <div><p class="font-display font-extrabold text-2xl md:text-4xl">500+</p><p class="text-white/70 text-xs md:text-sm mt-1">Partner restaurants</p></div>
+      <div><p class="font-display font-extrabold text-2xl md:text-4xl">4.8★</p><p class="text-white/70 text-xs md:text-sm mt-1">Average rating</p></div>
+    </div>
+  </section>
+
+  <!-- Get the app -->
+  <section id="get-app" class="mt-12 grid md:grid-cols-2 gap-8 items-center surface rounded-3xl p-8" style="box-shadow:var(--shadow)">
+    <div>
+      <h2 class="font-display font-bold text-2xl mb-2">Get the FoodHub app</h2>
+      <p class="text-muted text-sm mb-5">App-only deals, one-tap reorder and live order tracking on the go.</p>
+      <div class="flex flex-wrap gap-3">
+        <a href="#" class="flex items-center gap-2 bg-black text-white rounded-xl px-4 py-2.5">
+          <span class="text-2xl">▶</span>
+          <span class="leading-tight text-left"><span class="block text-[10px] uppercase opacity-70">Get it on</span><span class="block font-semibold">Google Play</span></span>
+        </a>
+        <a href="#" class="flex items-center gap-2 bg-black text-white rounded-xl px-4 py-2.5">
+          <span class="text-2xl">🍎</span>
+          <span class="leading-tight text-left"><span class="block text-[10px] uppercase opacity-70">Download on the</span><span class="block font-semibold">App Store</span></span>
+        </a>
+      </div>
+    </div>
+    <div class="flex justify-center">
+      <div class="w-52 h-96 rounded-[2rem] border-8 border-gray-900 bg-white overflow-hidden flex flex-col">
+        <div class="px-3 py-2.5 flex items-center gap-1.5" style="background:#f97316">
+          <span class="text-white font-bold text-sm">🍔 FoodHub</span>
+        </div>
+        <div class="px-3 py-2"><div class="bg-gray-100 rounded-lg text-[10px] text-gray-400 px-2 py-1.5">Search restaurants…</div></div>
+        <div class="flex-1 px-3 space-y-2">
+          <div class="flex gap-2 items-center bg-gray-50 rounded-xl p-2"><span class="text-2xl">🍕</span><div class="flex-1"><p class="text-[11px] font-semibold text-gray-900">Pizza Palace</p><p class="text-[10px] text-gray-500">⭐ 4.2 • 25-35 min</p></div></div>
+          <div class="flex gap-2 items-center bg-gray-50 rounded-xl p-2"><span class="text-2xl">🍜</span><div class="flex-1"><p class="text-[11px] font-semibold text-gray-900">Dragon Wok</p><p class="text-[10px] text-gray-500">⭐ 4.3 • 20-30 min</p></div></div>
+          <div class="flex gap-2 items-center bg-gray-50 rounded-xl p-2"><span class="text-2xl">🍔</span><div class="flex-1"><p class="text-[11px] font-semibold text-gray-900">Burger Barn</p><p class="text-[10px] text-gray-500">⭐ 4.1 • 20-30 min</p></div></div>
+        </div>
+        <div class="border-t border-gray-200 grid grid-cols-4 text-center text-[9px] text-gray-500 py-2">
+          <span>🏠<br>Home</span><span>🔍<br>Search</span><span>🛒<br>Cart</span><span>👤<br>Profile</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+/* Food category tiles with photos — clicking one filters the restaurant list */
+const TILES = [
+  { name: "Biryani",      img: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=300&q=60" },
+  { name: "Pizza",        img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=300&q=60" },
+  { name: "Chinese",      img: "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=300&q=60" },
+  { name: "South Indian", img: "https://images.unsplash.com/photo-1630383249896-424e482df921?auto=format&fit=crop&w=300&q=60" },
+  { name: "Burgers",      img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=300&q=60" },
+  { name: "Desserts",     img: "https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=300&q=60" },
+];
+let activeCuisine = "All";
+
+function renderTiles() {
+  document.getElementById("tiles").innerHTML = TILES.map(t => {
+    const active = t.name === activeCuisine;
+    return `<button onclick="setCuisine('${t.name}')" class="group text-center">
+      <span class="block w-full aspect-square rounded-2xl overflow-hidden transition ${active ? "ring-4 ring-orange-500" : "ring-1 ring-black/10"}" style="box-shadow:var(--shadow)">
+        <img src="${t.img}" onerror="imgFallback(this)" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="${t.name}">
+      </span>
+      <span class="block mt-2 text-sm ${active ? "font-bold" : "font-medium"}" ${active ? 'style="color:var(--brand-dark)"' : ""}>${t.name}</span>
+    </button>`;
+  }).join("");
+}
+
+function setCuisine(c) {
+  // clicking the active tile again clears the filter
+  activeCuisine = (c === "All" || activeCuisine === c) ? "All" : c;
+  renderTiles();
+  document.getElementById("clear-filter").classList.toggle("hidden", activeCuisine === "All");
+  loadRestaurants();
+}
+
+/* ---------- Offer banner carousel (auto-rotating) ---------- */
+
+let bannerIdx = 0;
+const BANNER_COUNT = 3;
+function goBanner(i) {
+  bannerIdx = (i + BANNER_COUNT) % BANNER_COUNT;
+  document.getElementById("banner-track").style.transform = "translateX(-" + (bannerIdx * 100) + "%)";
+  document.getElementById("banner-dots").innerHTML = [0, 1, 2].map(d =>
+    `<button onclick="goBanner(${d})" aria-label="Banner ${d + 1}" class="h-2 rounded-full transition-all ${d === bannerIdx ? "w-6 bg-white" : "w-2 bg-white/50"}"></button>`
+  ).join("");
+}
+setInterval(() => goBanner(bannerIdx + 1), 4500);
+
+/* ---------- Live search suggestions ---------- */
+
+let sugTimer = null;
+const searchInput = document.getElementById("search");
+searchInput.addEventListener("input", () => {
+  clearTimeout(sugTimer);
+  const q = searchInput.value.trim();
+  const box = document.getElementById("suggestions");
+  if (q.length < 2) { box.classList.add("hidden"); return; }
+  sugTimer = setTimeout(async () => {
+    try {
+      const data = await apiFetch("/restaurants" + qs({ search: q }));
+      const list = (data.restaurants || data || []).slice(0, 5);
+      if (!list.length) { box.classList.add("hidden"); return; }
+      box.innerHTML = list.map(r => {
+        const id = r._id || r.id;
+        return `<a href="restaurant.html?id=${id}" class="flex items-center gap-3 px-4 py-2.5 hover:bg-black/5">
+          <span class="text-xl">🍽️</span>
+          <span class="min-w-0"><span class="block text-sm font-medium text-gray-900 truncate">${esc(r.name)}</span>
+          <span class="block text-xs text-gray-500 truncate">${esc(r.cuisine || "")} • ⭐ ${r.rating || "New"}</span></span>
+        </a>`;
+      }).join("")
+      + `<button onclick="doSearch();document.getElementById('suggestions').classList.add('hidden')" class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-black/5" style="color:var(--brand-dark)">See all results for "${esc(q)}" →</button>`;
+      box.classList.remove("hidden");
+    } catch (e) { box.classList.add("hidden"); }
+  }, 300);
+});
+// hide suggestions when clicking elsewhere
+document.addEventListener("click", e => {
+  const box = document.getElementById("suggestions");
+  if (box && !box.classList.contains("hidden") && !e.target.closest("#search-wrap")) box.classList.add("hidden");
+});
+
+function doSearch() {
+  loadRestaurants(document.getElementById("search").value.trim());
+}
+
+/** Fetch restaurants from GET /api/restaurants?search=&cuisine= and render cards */
+async function loadRestaurants(search) {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = skeletonCards(8);
+  document.getElementById("empty").classList.add("hidden");
+  try {
+    const q = search !== undefined ? search : document.getElementById("search").value.trim();
+    const data = await apiFetch("/restaurants" + qs({
+      search: q,
+      cuisine: activeCuisine === "All" ? "" : activeCuisine,
+    }));
+    const list = data.restaurants || data || [];
+    sortRestaurants(list);
+    document.getElementById("res-count").textContent = list.length;
+    if (list.length === 0) {
+      grid.innerHTML = "";
+      document.getElementById("empty").classList.remove("hidden");
+      return;
+    }
+    grid.innerHTML = list.map(card).join("");
+  } catch (e) {
+    grid.innerHTML = `<div class="col-span-full text-center py-16 text-muted">
+      <div class="text-5xl mb-3">⚠️</div><p>Could not load restaurants.<br>Is the backend running on port 5000?</p>
+      <p class="text-sm mt-2">${esc(e.message)}</p></div>`;
+  }
+}
+
+/** Client-side sorting: by rating (high→low) or delivery time (fast→slow). */
+function sortRestaurants(list) {
+  const mode = document.getElementById("sort").value;
+  if (mode === "rating") {
+    list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  } else if (mode === "fastest") {
+    list.sort((a, b) => parseMins(a.deliveryTime) - parseMins(b.deliveryTime));
+  }
+}
+
+/** "25-35 min" -> 25 (lower bound, for sorting). */
+function parseMins(t) {
+  const m = String(t || "").match(/\d+/);
+  return m ? parseInt(m[0], 10) : 999;
+}
+
+function card(r) {
+  const id = r._id || r.id;
+  const imgHtml = r.image
+    ? `<img src="${esc(imgUrl(r.image))}" onerror="imgFallback(this)" loading="lazy" class="w-full h-40 object-cover" alt="${esc(r.name)}">`
+    : `<div class="w-full h-40 img-fallback">🍽️</div>`;
+  return `<a href="restaurant.html?id=${id}" class="surface rounded-2xl overflow-hidden hover:-translate-y-1 transition-transform" style="box-shadow:var(--shadow)">
+    <div class="relative">
+      ${imgHtml}
+      <span class="absolute top-3 left-3 text-[11px] font-bold px-2 py-1 rounded-lg text-white whitespace-nowrap" style="background:rgba(194,65,12,.95)">50% OFF up to ₹120</span>
+    </div>
+    <div class="p-4">
+      <div class="flex items-start justify-between gap-2">
+        <h3 class="font-display font-semibold truncate">${esc(r.name)}</h3>
+        <span class="text-xs font-bold px-2 py-1 rounded-lg text-white whitespace-nowrap" style="background:var(--success)">⭐ ${r.rating || "New"}</span>
+      </div>
+      <p class="text-sm text-muted truncate mt-1">${esc(r.cuisine || "")}${r.ratingCount ? " • " + r.ratingCount + " ratings" : ""}</p>
+      <p class="text-xs text-muted mt-2">🕒 ${esc(r.deliveryTime || "30-40 min")} delivery</p>
+    </div></a>`;
+}
+
+// Enter key in the search box triggers search
+document.getElementById("search").addEventListener("keydown", e => {
+  if (e.key === "Enter") doSearch();
+});
+
+renderTiles();
+goBanner(0);
+initCommon();
+loadRestaurants("");
+
+</script>
+</body>
+</html>

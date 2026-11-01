@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Offers & Coupons</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-4xl mx-auto px-4 py-8">
+  <h1 class="font-display font-bold text-2xl mb-1">🎉 Offers & Coupons</h1>
+  <p class="text-sm text-muted mb-6">Copy a code and paste it in your cart to save on every order.</p>
+
+  <div id="list" class="grid sm:grid-cols-2 gap-5"></div>
+  <div id="empty" class="hidden text-center py-16 text-muted">
+    <div class="text-5xl mb-3">🏷️</div>
+    <p>No offers right now. Check back soon!</p>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+/** Load live coupons from GET /api/coupons and render offer cards */
+async function loadOffers() {
+  const list = document.getElementById("list");
+  list.innerHTML = skeletonCards(4);
+  try {
+    const data = await apiFetch("/coupons");
+    const coupons = data.coupons || [];
+    if (!coupons.length) {
+      list.innerHTML = "";
+      document.getElementById("empty").classList.remove("hidden");
+      return;
+    }
+    list.innerHTML = coupons.map(offerCard).join("");
+  } catch (e) {
+    list.innerHTML = `<div class="col-span-full text-center py-16 text-muted">
+      <div class="text-5xl mb-3">⚠️</div><p>Could not load offers.<br>Is the backend running on port 5000?</p></div>`;
+  }
+}
+
+function describe(c) {
+  if (c.freeDelivery) return "FREE delivery";
+  return c.discountPercent + "% OFF" + (c.maxDiscount ? " up to " + inr(c.maxDiscount) : "");
+}
+
+function offerCard(c) {
+  return `<div class="surface rounded-2xl p-5 relative overflow-hidden" style="box-shadow:var(--shadow)">
+    <div class="absolute top-0 left-0 w-1.5 h-full" style="background:var(--brand)"></div>
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <p class="font-display font-bold text-lg">${esc(describe(c))}</p>
+        <p class="text-sm text-muted mt-1">${c.minOrder ? "On orders above " + inr(c.minOrder) : "No minimum order"}</p>
+      </div>
+      <span class="text-3xl">🏷️</span>
+    </div>
+    <div class="flex items-center gap-2 mt-4">
+      <code class="flex-1 text-center font-bold tracking-widest px-3 py-2 rounded-xl surface">${esc(c.code)}</code>
+      <button onclick="copyCode('${esc(c.code)}')" class="btn-brand !px-4 !py-2 text-sm">Copy</button>
+    </div>
+    <a href="index.html" class="block text-center text-sm font-medium mt-3 hover:opacity-70" style="color:var(--brand-dark)">Order now →</a>
+  </div>`;
+}
+
+function copyCode(code) {
+  const done = () => toast("Code " + code + " copied! Paste it in your cart.", "success");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(done).catch(() => fallbackCopy(code, done));
+  } else {
+    fallbackCopy(code, done);
+  }
+}
+
+function fallbackCopy(code, done) {
+  const ta = document.createElement("textarea");
+  ta.value = code;
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); } catch (e) {}
+  document.body.removeChild(ta);
+  done();
+}
+
+initCommon();
+loadOffers();
+</script>
+</body>
+</html>

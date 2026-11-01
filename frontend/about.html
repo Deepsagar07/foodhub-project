@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — About Us</title>
+<meta name="description" content="About FoodHub — Dehradun's own food ordering app.">
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<!-- Hero -->
+<header class="relative overflow-hidden">
+  <div class="absolute inset-0" style="background:linear-gradient(135deg,#f97316,#c2410c)"></div>
+  <div class="relative max-w-7xl mx-auto px-4 py-16 md:py-20 text-white">
+    <p class="text-xs font-bold tracking-widest uppercase opacity-80">Our story</p>
+    <h1 class="font-display font-extrabold text-3xl md:text-5xl mt-2">Dehradun's own<br>food ordering app 🍔</h1>
+    <p class="opacity-90 mt-4 max-w-xl text-sm md:text-lg">FoodHub started as a Frontend Engineering course project with one goal —
+      make ordering food in Dehradun feel as good as the food tastes.</p>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-10">
+
+  <!-- Mission cards -->
+  <div class="grid sm:grid-cols-3 gap-5">
+    <div class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
+      <div class="text-3xl mb-3">🔥</div>
+      <h3 class="font-display font-semibold text-lg mb-1">Hot & Fast</h3>
+      <p class="text-sm text-muted">Average 30-minute delivery across Rajpur Road, Jakhan, Ballupur and 9 more areas — with live order tracking on every order.</p>
+    </div>
+    <div class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
+      <div class="text-3xl mb-3">🏔️</div>
+      <h3 class="font-display font-semibold text-lg mb-1">Truly Local</h3>
+      <p class="text-sm text-muted">From Pahadi flavours to late-night momos cravings — our restaurants are Dehradun's own, not a copy-paste metro list.</p>
+    </div>
+    <div class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
+      <div class="text-3xl mb-3">🤝</div>
+      <h3 class="font-display font-semibold text-lg mb-1">Honest Pricing</h3>
+      <p class="text-sm text-muted">No hidden charges. Discounts are calculated on the server, coupons like WELCOME50 actually work, and the bill you see is the bill you pay.</p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <section class="mt-10 rounded-3xl p-8 text-white text-center" style="background:linear-gradient(135deg,#1c1917,#57534e)">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div><p class="font-display font-extrabold text-3xl">2L+</p><p class="text-white/70 text-sm mt-1">Orders delivered</p></div>
+      <div><p class="font-display font-extrabold text-3xl">500+</p><p class="text-white/70 text-sm mt-1">Partner restaurants</p></div>
+      <div><p class="font-display font-extrabold text-3xl">12</p><p class="text-white/70 text-sm mt-1">Areas in Dehradun</p></div>
+      <div><p class="font-display font-extrabold text-3xl">4.8★</p><p class="text-white/70 text-sm mt-1">Average rating</p></div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <h2 class="font-display font-bold text-xl mt-12 mb-5">How FoodHub works</h2>
+  <div class="grid sm:grid-cols-3 gap-5">
+    <div class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
+      <p class="font-display font-extrabold text-3xl mb-2" style="color:var(--brand)">1</p>
+      <h3 class="font-semibold mb-1">Pick your craving</h3>
+      <p class="text-sm text-muted">Browse Dehradun restaurants, filter by cuisine, or let GPS find real nearby cafes and food courts.</p>
+    </div>
+    <div class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
+      <p class="font-display font-extrabold text-3xl mb-2" style="color:var(--brand)">2</p>
+      <h3 class="font-semibold mb-1">Order in a tap</h3>
+      <p class="text-sm text-muted">Add dishes to your cart, apply a coupon, check out with UPI, card or cash on delivery.</p>
+    </div>
+    <div class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
+      <p class="font-display font-extrabold text-3xl mb-2" style="color:var(--brand)">3</p>
+      <h3 class="font-semibold mb-1">Track it live</h3>
+      <p class="text-sm text-muted">Watch your order go from Placed → Preparing → On the way → Delivered, refreshed every 10 seconds.</p>
+    </div>
+  </div>
+
+  <!-- Tech note -->
+  <section class="surface rounded-2xl p-6 mt-10" style="box-shadow:var(--shadow)">
+    <h2 class="font-display font-semibold text-lg mb-2">🛠️ Built with modern tech</h2>
+    <p class="text-sm text-muted">HTML, CSS and JavaScript on the frontend · Node.js (Express) REST APIs ·
+      MongoDB for users, restaurants, menus and orders · Clean MVC application design ·
+      JWT authentication, secure headers and rate limiting. No outdated or vulnerable dependencies.</p>
+  </section>
+
+  <div class="text-center mt-10">
+    <a href="index.html" class="btn-brand inline-block">Hungry? Order now →</a>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+initCommon();
+</script>
+</body>
+</html>
