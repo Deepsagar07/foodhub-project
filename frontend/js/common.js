@@ -588,9 +588,13 @@ function renderFooter() {
         .map(c => '<button onclick="setLocality(\'' + c + '\')" class="text-xs px-3 py-1.5 rounded-full surface text-muted hover:opacity-70 hover:ring-1 hover:ring-orange-500" title="Set delivery location to ' + c + '">' + c + "</button>").join("")
     + "</div></div>"
     + '<div class="border-t" style="border-color:var(--border)">'
-    + '<div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted">'
-    + "<p>© 2026 FoodHub. All rights reserved. | FSSAI Lic. No. 10012043001234</p>"
-    + "<p>Built as a Frontend Engineering course project 🍕</p>"
+    + '<div class="max-w-7xl mx-auto px-4 py-4 text-center text-xs text-muted space-y-1">'
+    + "<p>© 2026 FoodHub · All rights reserved</p>"
+    + "<p>FSSAI Lic. No. 10012043001234</p>"
+    + "<p>Built as a Frontend Engineering course project</p>"
+    + "<p>Built by "
+    + '<span class="font-semibold" style="color:var(--brand)">Deep Sagar</span> & '
+    + '<span class="font-semibold" style="color:var(--brand)">Ayush Gupta</span></p>'
     + "</div></div>";
   document.body.appendChild(f);
 }
