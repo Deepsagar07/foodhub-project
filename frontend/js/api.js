@@ -7,7 +7,7 @@
 
 // 👇 Deploy karne ke baad apne Render backend ka URL yahan likho,
 //    e.g. "https://foodhub-backend-xyz.onrender.com/api"
-const DEPLOYED_API = "https://YOUR-BACKEND.onrender.com/api";
+const DEPLOYED_API = "https://foodhub-project-l5x9.onrender.com/api";
 
 // Local machine par localhost:5000, internet par (deployed site) DEPLOYED_API
 const IS_LOCAL = ["localhost", "127.0.0.1", ""].includes(location.hostname) || location.protocol === "file:";
