@@ -64,6 +64,44 @@
       </table>
     </div>
   </section>
+
+  <!-- Visitor analytics -->
+  <section class="surface rounded-2xl p-5 mt-6" style="box-shadow:var(--shadow)">
+    <h2 class="font-display font-semibold mb-1">👀 Visitor Analytics</h2>
+    <p class="text-xs text-muted mb-4">Who visited, from where, on what device. Visits auto-delete after 30 days.</p>
+    <div class="overflow-x-auto mb-8">
+      <table class="w-full text-sm min-w-[760px]">
+        <thead>
+          <tr class="text-left text-muted border-b" style="border-color:var(--border)">
+            <th class="py-2 pr-3">Time</th>
+            <th class="py-2 pr-3">Visitor</th>
+            <th class="py-2 pr-3">IP</th>
+            <th class="py-2 pr-3">Location</th>
+            <th class="py-2 pr-3">Page</th>
+            <th class="py-2 pr-3">Device</th>
+          </tr>
+        </thead>
+        <tbody id="visits-body"></tbody>
+      </table>
+    </div>
+    <h2 class="font-display font-semibold mb-3">👥 Users</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[760px]">
+        <thead>
+          <tr class="text-left text-muted border-b" style="border-color:var(--border)">
+            <th class="py-2 pr-3">User</th>
+            <th class="py-2 pr-3">Role</th>
+            <th class="py-2 pr-3">Joined</th>
+            <th class="py-2 pr-3">Last login</th>
+            <th class="py-2 pr-3">Logins</th>
+            <th class="py-2 pr-3">Last IP</th>
+            <th class="py-2 pr-3">Orders</th>
+          </tr>
+        </thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </div>
+  </section>
 </main>
 
 <!-- Add/Edit dish modal -->
@@ -132,6 +170,7 @@ async function init() {
 
   await loadRestaurantsForMenu();
   await loadOrders();
+  await loadAnalytics();
 }
 
 /** Chart.js horizontal bar chart of top dishes */
@@ -265,6 +304,68 @@ async function deleteDish(id) {
     loadMenu();
   } catch (e) {
     toast(e.message, "error");
+  }
+}
+
+/* ---------------- Visitor analytics ---------------- */
+
+/** GET /api/admin/visits + /api/admin/users -> analytics tables */
+async function loadAnalytics() {
+  const vb = document.getElementById("visits-body");
+  const ub = document.getElementById("users-body");
+  if (!vb || !ub) return;
+
+  // --- visits ---
+  vb.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-muted">Loading…</td></tr>`;
+  try {
+    const visits = await apiFetch("/admin/visits", { auth: true });
+    const list = Array.isArray(visits) ? visits : (visits.visits || []);
+    vb.innerHTML = list.length ? list.map(v => {
+      const who = v.user
+        ? `${esc(v.user.name || "—")}<br><span class="text-xs text-muted">${esc(v.user.email || "")}</span>`
+        : `<span class="text-muted">Guest</span>`;
+      const loc = [v.city, v.country].filter(Boolean).join(", ") || "—";
+      const time = new Date(v.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      return `<tr class="border-b" style="border-color:var(--border)">
+        <td class="py-2 pr-3 whitespace-nowrap">${time}</td>
+        <td class="py-2 pr-3">${who}</td>
+        <td class="py-2 pr-3 font-mono text-xs">${esc(v.ip || "—")}</td>
+        <td class="py-2 pr-3">${esc(loc)}</td>
+        <td class="py-2 pr-3 font-mono text-xs">${esc(v.path || "/")}</td>
+        <td class="py-2 pr-3">${esc(v.device || "—")}</td></tr>`;
+    }).join("") : `<tr><td colspan="6" class="py-6 text-center text-muted">No visits recorded yet. Open any page and refresh.</td></tr>`;
+  } catch (e) {
+    vb.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-muted">${esc(e.message)}</td></tr>`;
+  }
+
+  // --- users ---
+  ub.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-muted">Loading…</td></tr>`;
+  try {
+    const users = await apiFetch("/admin/users", { auth: true });
+    const list = Array.isArray(users) ? users : (users.users || []);
+    const roleBadge = (r) => r === "admin"
+      ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#ede9fe;color:#5b21b6">ADMIN</span>`
+      : r === "restaurant"
+      ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#ffedd5;color:#9a3412">PARTNER</span>`
+      : `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#e0f2fe;color:#075985">USER</span>`;
+    ub.innerHTML = list.length ? list.map(u => {
+      const joined = u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+      const lastLogin = u.lastLogin
+        ? new Date(u.lastLogin).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+        : `<span class="text-muted">never</span>`;
+      const rest = (u.role === "restaurant" && u.restaurant && u.restaurant.name)
+        ? `<br><span class="text-xs font-semibold" style="color:var(--brand-dark)">🏪 ${esc(u.restaurant.name)}</span>` : "";
+      return `<tr class="border-b" style="border-color:var(--border)">
+        <td class="py-2 pr-3">${esc(u.name || "—")}<br><span class="text-xs text-muted">${esc(u.email || "")}</span>${rest}</td>
+        <td class="py-2 pr-3">${roleBadge(u.role)}</td>
+        <td class="py-2 pr-3 whitespace-nowrap">${joined}</td>
+        <td class="py-2 pr-3 whitespace-nowrap">${lastLogin}</td>
+        <td class="py-2 pr-3">${u.loginCount || 0}</td>
+        <td class="py-2 pr-3 font-mono text-xs">${esc(u.lastLoginIp || "—")}</td>
+        <td class="py-2 pr-3 font-semibold">${u.orderCount ?? "—"}</td></tr>`;
+    }).join("") : `<tr><td colspan="7" class="py-6 text-center text-muted">No users yet.</td></tr>`;
+  } catch (e) {
+    ub.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-muted">${esc(e.message)}</td></tr>`;
   }
 }
 

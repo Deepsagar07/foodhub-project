@@ -106,4 +106,31 @@ const deleteMenuItem = asyncHandler(async (req, res) => {
   res.json({ message: 'Menu item deleted' });
 });
 
-module.exports = { getStats, getAllOrders, createMenuItem, updateMenuItem, deleteMenuItem };
+// GET /api/admin/visits (admin) -> latest 200 page views, newest first
+const getVisits = asyncHandler(async (req, res) => {
+  const Visit = require('../models/Visit');
+  const visits = await Visit.find()
+    .populate('user', 'name email')
+    .sort({ createdAt: -1 })
+    .limit(200);
+  res.json(visits);
+});
+
+// GET /api/admin/users (admin) -> all users with login stats + order counts
+// Note: password hashes are never selected, so they can never leak here.
+const getUsers = asyncHandler(async (req, res) => {
+  const users = await User.find()
+    .select('-passwordHash')
+    .populate('restaurant', 'name')
+    .sort({ createdAt: -1 })
+    .lean();
+  const withOrders = await Promise.all(
+    users.map(async (u) => ({
+      ...u,
+      orderCount: await Order.countDocuments({ user: u._id }),
+    }))
+  );
+  res.json(withOrders);
+});
+
+module.exports = { getStats, getAllOrders, createMenuItem, updateMenuItem, deleteMenuItem, getVisits, getUsers };

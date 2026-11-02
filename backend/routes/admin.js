@@ -8,6 +8,8 @@ const {
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,
+  getVisits,
+  getUsers,
 } = require('../controllers/adminController');
 
 const router = express.Router();
@@ -16,6 +18,8 @@ router.use(protect, adminOnly); // everything below is admin-only
 
 router.get('/stats', getStats);
 router.get('/orders', getAllOrders);
+router.get('/visits', getVisits);
+router.get('/users', getUsers);
 router.post('/menu', upload.single('image'), createMenuItem);
 router.put('/menu/:id', upload.single('image'), updateMenuItem);
 router.delete('/menu/:id', deleteMenuItem);

@@ -13,6 +13,10 @@ const { securityHeaders, rateLimit } = require('./middleware/security');
 
 const app = express();
 
+// Render sits behind a proxy — trust it so req.ip is the real visitor IP
+// (needed for login/visit analytics). Only the first proxy hop is trusted.
+app.set('trust proxy', 1);
+
 // Secure response headers on every request
 app.use(securityHeaders);
 // Allow the frontend (running on a different origin) to call this API
@@ -40,6 +44,7 @@ app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/stats', require('./routes/stats')); // public live counters (no auth)
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/partner', require('./routes/partner')); // restaurant-side order management
+app.use('/api/analytics', require('./routes/analytics')); // visitor tracking beacon (public)
 
 // Simple health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

@@ -91,6 +91,9 @@ The frontend calls the API at `http://localhost:5000/api` (see `frontend/js/api.
 > **Restaurant partner:** run `npm run seed:partners` once, then open `partner.html` and log in as
 > e.g. `partner.doonbiryanihouse@foodhub.in` / `partner123` (pattern: `partner.<restaurantname>` lowercase, no spaces).
 > New customer orders pop up live with a sound alert — Accept ✅ / Reject ❌, then Mark Ready 🍳 / Delivered ✅.
+> **Visitor analytics:** every page view is logged (IP, city/country via free IP geolocation, device, page;
+> linked to the user when logged in). Logins stamp last-login time, count and IP. See it in `admin.html`
+> → "Visitor Analytics" (visits auto-delete after 30 days; passwords are hashed and never shown).
 
 ## 🌐 Deployment (make it visitable by anyone)
 

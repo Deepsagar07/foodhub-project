@@ -92,7 +92,7 @@ function render(o) {
     return `<div class="timeline-step ${cls}">
       <div class="timeline-dot">${i < currentIdx ? "✓" : s.icon}</div>
       <p class="font-semibold">${s.label}</p>
-      <p class="text-xs text-muted">${ts ? fmtTime(ts) : (i === currentIdx ? "In progress…" : "Pending")}</p>
+      <p class="text-xs text-muted">${ts ? fmtTime(ts) : (i === currentIdx ? (s.key === "delivered" ? "Completed 🎉" : "In progress…") : "Pending")}</p>
     </div>`;
   }).join("");
 

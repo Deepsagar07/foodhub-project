@@ -66,6 +66,12 @@ const login = asyncHandler(async (req, res) => {
     return res.status(401).json({ message: 'Invalid email or password' });
   }
 
+  // Stamp login analytics (visible in the admin dashboard)
+  user.lastLogin = new Date();
+  user.loginCount = (user.loginCount || 0) + 1;
+  user.lastLoginIp = req.ip || '';
+  await user.save();
+
   res.json({ token: signToken(user), user: safeUser(user) });
 });
 

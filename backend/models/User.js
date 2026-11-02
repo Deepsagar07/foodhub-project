@@ -26,6 +26,10 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ['user', 'admin', 'restaurant'], default: 'user' },
     // For role='restaurant': the outlet this partner account manages
     restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', default: null },
+    // Login analytics (visible in the admin dashboard)
+    lastLogin: { type: Date, default: null },
+    loginCount: { type: Number, default: 0 },
+    lastLoginIp: { type: String, default: '' },
     addresses: { type: [addressSchema], default: [] },
   },
   { timestamps: true }

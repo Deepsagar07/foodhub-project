@@ -616,6 +616,25 @@ function initCommon() {
   renderFooter();
   ensureDrawer();
   updateCartBadge();
+  sendVisitBeacon();
+}
+
+/* ---------------- Visitor analytics beacon ---------------- */
+/** Logs this page view server-side (IP/device captured there).
+ *  Fire-and-forget: never blocks the page, never uses apiFetch
+ *  (guests have no token and must NOT be redirected to login). */
+function sendVisitBeacon() {
+  try {
+    const headers = { "Content-Type": "application/json" };
+    const tok = localStorage.getItem("fh_token");
+    if (tok) headers["Authorization"] = "Bearer " + tok;
+    fetch(API_BASE + "/analytics/visit", {
+      method: "POST",
+      headers: headers,
+      keepalive: true,
+      body: JSON.stringify({ path: location.pathname }),
+    }).catch(() => {});
+  } catch (e) { /* analytics must never break the page */ }
 }
 
 /* ---------------- Footer (injected on every page) ---------------- */
