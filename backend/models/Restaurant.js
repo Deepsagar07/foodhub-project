@@ -12,6 +12,7 @@ const restaurantSchema = new mongoose.Schema(
     deliveryFee: { type: Number, default: 0, min: 0 }, // in rupees
     address: { type: String, default: '' },
     city: { type: String, default: 'Dehradun', trim: true, index: true }, // service city: Dehradun | Patna
+    area: { type: String, default: '', trim: true }, // locality the outlet serves, e.g. "Rajpur Road"
   },
   { timestamps: true }
 );

@@ -21,6 +21,7 @@ const patnaRestaurants = [
     deliveryFee: 35,
     address: '12, Bailey Road, Patna, Bihar',
     city: 'Patna',
+    area: 'Bailey Road',
   },
   {
     name: 'Patna Pizza Point',
@@ -32,6 +33,7 @@ const patnaRestaurants = [
     deliveryFee: 29,
     address: '45, Bailey Road, Patna, Bihar',
     city: 'Patna',
+    area: 'Bailey Road',
   },
   {
     name: 'Kankarbagh Dosa Corner',
@@ -43,6 +45,7 @@ const patnaRestaurants = [
     deliveryFee: 25,
     address: '8, Kankarbagh, Patna, Bihar',
     city: 'Patna',
+    area: 'Kankarbagh',
   },
   {
     name: 'Kankarbagh Food Junction',
@@ -54,6 +57,7 @@ const patnaRestaurants = [
     deliveryFee: 30,
     address: '23, Kankarbagh, Patna, Bihar',
     city: 'Patna',
+    area: 'Kankarbagh',
   },
 ];
 
@@ -89,6 +93,20 @@ const patnaMenus = {
   ],
 };
 
+// Locality each outlet serves (used for area-level filtering on the homepage).
+const AREA_BY_NAME = {
+  'Doon Biryani House': 'Rajpur Road',
+  'Pahadi Pizza Co.': 'Mussoorie Diversion',
+  'Doon Dragon Wok': 'Clock Tower',
+  'Garhwal Dosa Junction': 'Sahastradhara Road',
+  'Doon Burger Barn': 'Ballupur',
+  'Doon Sweet Tooth': 'Jakhan',
+  'Bailey Biryani House': 'Bailey Road',
+  'Patna Pizza Point': 'Bailey Road',
+  'Kankarbagh Dosa Corner': 'Kankarbagh',
+  'Kankarbagh Food Junction': 'Kankarbagh',
+};
+
 async function seedPatna() {
   await connectDB();
 
@@ -99,7 +117,18 @@ async function seedPatna() {
   );
   console.log(`Backfilled city=Dehradun on ${backfilled.modifiedCount} restaurants`);
 
-  // Idempotent: skip if Patna outlets already exist
+  // Backfill: serving area for restaurants that don't have one yet
+  let areaCount = 0;
+  for (const [name, area] of Object.entries(AREA_BY_NAME)) {
+    const r = await Restaurant.updateMany(
+      { name, area: { $in: [null, ''] } },
+      { $set: { area } }
+    );
+    areaCount += r.modifiedCount;
+  }
+  console.log(`Backfilled area on ${areaCount} restaurants`);
+
+  // Idempotent: skip Patna inserts if they already exist (backfills above still ran)
   const existing = await Restaurant.countDocuments({ city: 'Patna' });
   if (existing > 0) {
     console.log(`Patna already seeded (${existing} restaurants) — nothing to do`);

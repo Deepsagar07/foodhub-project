@@ -87,7 +87,7 @@
 
   <!-- Restaurant grid -->
   <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
-    <h2 class="font-display font-bold text-xl"><span id="res-count">0</span> restaurants near you</h2>
+    <h2 class="font-display font-bold text-xl"><span id="res-count">0</span> restaurants near you <span id="area-note" class="text-sm font-medium text-muted"></span></h2>
     <div class="flex items-center gap-2">
       <select id="min-rating" onchange="loadRestaurants()" class="input !w-auto text-sm font-medium">
         <option value="0">Any rating</option>
@@ -235,11 +235,21 @@ async function loadRestaurants(search) {
     }
     // Filter restaurants to the user's service city (missing city = Dehradun, backfilled)
     const cityList = serviceCity ? list.filter(r => (r.city || "Dehradun") === serviceCity) : list;
+    // Area filter: a picked locality (footer pill / manual entry) shows only the
+    // restaurants serving that area. Falls back to the whole city when nothing
+    // matches (e.g. GPS spots like Bhatta) or no specific area was picked.
+    const loc = getSavedLocation();
+    let areaList = cityList, areaName = "";
+    if (serviceCity && loc && loc.area) {
+      const matched = cityList.filter(r => areaMatches(loc.area, r.area || ""));
+      if (matched.length > 0) { areaList = matched; areaName = loc.area; }
+    }
     // min-rating filter (client-side)
     const minR = parseFloat(document.getElementById("min-rating").value) || 0;
-    const filtered = minR > 0 ? cityList.filter(r => (r.rating || 0) >= minR) : cityList;
+    const filtered = minR > 0 ? areaList.filter(r => (r.rating || 0) >= minR) : areaList;
     sortRestaurants(filtered);
     document.getElementById("res-count").textContent = filtered.length;
+    document.getElementById("area-note").textContent = areaName ? `in ${areaName}` : "";
     if (filtered.length === 0) {
       grid.innerHTML = "";
       document.getElementById("empty").classList.remove("hidden");

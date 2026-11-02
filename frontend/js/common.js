@@ -343,6 +343,21 @@ const SERVICEABLE = {
 };
 
 /**
+ * Does a restaurant serve the user's picked area?
+ * Token-based so small naming differences still match, e.g.
+ *   user "Mussoorie Road"  <->  restaurant "Mussoorie Diversion"
+ *   user "Rajpur Road"     <->  restaurant "Rajpur Road"
+ * Restaurants with no area set serve the whole city (shown everywhere).
+ */
+function areaMatches(userArea, restArea) {
+  if (!restArea) return true;
+  if (!userArea) return true;
+  const tokens = (s) =>
+    s.toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w.length > 3 && w !== "road");
+  const uw = tokens(userArea), rw = tokens(restArea);
+  return uw.some((w) => rw.includes(w)) || rw.some((w) => uw.includes(w));
+}
+/**
  * Which service city the saved location belongs to: "Dehradun" | "Patna" | null.
  * null = no location saved yet, or the area is outside our service cities
  * (the site then shows a "Coming soon" state instead of restaurants).
