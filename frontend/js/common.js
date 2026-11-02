@@ -346,6 +346,12 @@ const SERVICEABLE = {
  * Which service city the saved location belongs to: "Dehradun" | "Patna" | null.
  * null = no location saved yet, or the area is outside our service cities
  * (the site then shows a "Coming soon" state instead of restaurants).
+ *
+ * Detection is two-layer:
+ *  1. Name match (fast): area/city string contains a known name.
+ *  2. GPS radius (robust): villages near a city often reverse-geocode
+ *     without the city name, so we also accept anything within 70 km
+ *     of Dehradun or Patna.
  */
 function getServiceCity() {
   const loc = getSavedLocation();
@@ -355,6 +361,17 @@ function getServiceCity() {
   if (/dehradun/.test(hay)) return "Dehradun";
   for (const area of SERVICEABLE.Dehradun) {
     if (hay.includes(area.toLowerCase())) return "Dehradun";
+  }
+  // GPS fallback: distance from city centres (Haversine, km)
+  if (loc.lat && loc.lon) {
+    const distKm = (la1, lo1, la2, lo2) => {
+      const R = 6371, dLa = (la2 - la1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;
+      const a = Math.sin(dLa / 2) ** 2 +
+        Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    };
+    if (distKm(loc.lat, loc.lon, 30.3165, 78.0322) <= 70) return "Dehradun";
+    if (distKm(loc.lat, loc.lon, 25.5941, 85.1376) <= 70) return "Patna";
   }
   return null;
 }
