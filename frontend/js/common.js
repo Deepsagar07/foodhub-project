@@ -339,7 +339,7 @@ function setPatnaLocality(name) {
 /** Cities/areas where FoodHub delivers. Everything else -> "Coming soon". */
 const SERVICEABLE = {
   Dehradun: ["Rajpur Road", "Jakhan", "Sahastradhara Road", "Ballupur", "Clock Tower", "Dalanwala", "Vasant Vihar", "Patel Nagar", "Prem Nagar", "Raipur", "Clement Town", "Mussoorie Road"],
-  Patna: ["Bailey Road", "Kankarbagh"],
+  Patna: ["Raja Bazaar", "Patna Zoo", "Bihar Museum", "PMCH", "Patna Junction", "IGIMS", "Patliputra Junction", "Patna Secretariat", "NMCH", "Kankarbagh", "Rajendra Nagar"],
 };
 
 /**
@@ -347,15 +347,19 @@ const SERVICEABLE = {
  * Token-based so small naming differences still match, e.g.
  *   user "Mussoorie Road"  <->  restaurant "Mussoorie Diversion"
  *   user "Rajpur Road"     <->  restaurant "Rajpur Road"
+ * Every token of the shorter side must appear in the longer side, so
+ * "Patna Junction" does NOT match the "Patliputra Junction" outlet.
  * Restaurants with no area set serve the whole city (shown everywhere).
  */
 function areaMatches(userArea, restArea) {
   if (!restArea) return true;
   if (!userArea) return true;
   const tokens = (s) =>
-    s.toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w.length > 3 && w !== "road");
+    s.toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w.length >= 3 && w !== "road");
   const uw = tokens(userArea), rw = tokens(restArea);
-  return uw.some((w) => rw.includes(w)) || rw.some((w) => uw.includes(w));
+  if (!uw.length || !rw.length) return true;
+  const allIn = (a, b) => a.every((w) => b.includes(w));
+  return allIn(uw, rw) || allIn(rw, uw);
 }
 /**
  * Which service city the saved location belongs to: "Dehradun" | "Patna" | null.
@@ -372,11 +376,9 @@ function getServiceCity() {
   const loc = getSavedLocation();
   if (!loc) return null;
   const hay = ((loc.area || "") + " " + (loc.city || "")).toLowerCase();
-  if (/patna|bailey|kankarbagh/.test(hay)) return "Patna";
-  if (/dehradun/.test(hay)) return "Dehradun";
-  for (const area of SERVICEABLE.Dehradun) {
-    if (hay.includes(area.toLowerCase())) return "Dehradun";
-  }
+  const inList = (areas) => areas.some((a) => hay.includes(a.toLowerCase()));
+  if (/patna/.test(hay) || inList(SERVICEABLE.Patna)) return "Patna";
+  if (/dehradun/.test(hay) || inList(SERVICEABLE.Dehradun)) return "Dehradun";
   // GPS fallback: distance from city centres (Haversine, km)
   if (loc.lat && loc.lon) {
     const distKm = (la1, lo1, la2, lo2) => {
@@ -647,12 +649,12 @@ function renderFooter() {
     + '<h4 class="font-display font-semibold mb-3 text-sm">Delivering across Dehradun & Patna</h4>'
     + '<p class="text-xs text-muted mb-2 font-medium">Dehradun</p>'
     + '<div class="flex flex-wrap gap-2 mb-3">'
-    + ["Rajpur Road", "Jakhan", "Sahastradhara Road", "Ballupur", "Clock Tower", "Dalanwala", "Vasant Vihar", "Patel Nagar", "Prem Nagar", "Raipur", "Clement Town", "Mussoorie Road"]
+    + SERVICEABLE.Dehradun
         .map(c => '<button onclick="setLocality(\'' + c + '\')" class="text-xs px-3 py-1.5 rounded-full surface text-muted hover:opacity-70 hover:ring-1 hover:ring-orange-500" title="Set delivery location to ' + c + '">' + c + "</button>").join("")
     + '</div>'
     + '<p class="text-xs text-muted mb-2 font-medium">Patna</p>'
     + '<div class="flex flex-wrap gap-2">'
-    + ["Bailey Road", "Kankarbagh"]
+    + SERVICEABLE.Patna
         .map(c => '<button onclick="setPatnaLocality(\'' + c + '\')" class="text-xs px-3 py-1.5 rounded-full surface text-muted hover:opacity-70 hover:ring-1 hover:ring-orange-500" title="Set delivery location to ' + c + ", Patna" + '">' + c + ", Patna</button>").join("")
     + "</div></div>"
     + '<div class="border-t" style="border-color:var(--border)">'

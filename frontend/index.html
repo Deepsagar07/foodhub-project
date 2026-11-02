@@ -225,10 +225,10 @@ async function loadRestaurants(search) {
       grid.innerHTML = `<div class="col-span-full text-center py-16">
         <div class="text-5xl mb-4">🚧</div>
         <h3 class="font-display font-bold text-xl mb-2">Coming soon to ${esc(area)}!</h3>
-        <p class="text-muted text-sm mb-6">We're currently delivering in <b>Dehradun</b> & <b>Patna</b> (Bailey Road, Kankarbagh).</p>
+        <p class="text-muted text-sm mb-6">We're currently delivering across <b>Dehradun</b> & <b>Patna</b>.</p>
         <div class="flex flex-wrap justify-center gap-2">
           <button onclick="setLocality('Rajpur Road')" class="text-sm font-semibold px-4 py-2 rounded-xl btn-brand">Try Dehradun</button>
-          <button onclick="setPatnaLocality('Bailey Road')" class="text-sm font-semibold px-4 py-2 rounded-xl btn-brand">Try Patna</button>
+          <button onclick="setPatnaLocality('Patna Junction')" class="text-sm font-semibold px-4 py-2 rounded-xl btn-brand">Try Patna</button>
         </div></div>`;
       document.getElementById("empty").classList.add("hidden");
       return;
