@@ -88,6 +88,9 @@ The frontend calls the API at `http://localhost:5000/api` (see `frontend/js/api.
 > Admin login after seeding: `admin@foodhub.in` / `admin123` (role `admin`) → opens `admin.html`.
 > Demo customer: `demo@foodhub.in` / `demo123`.
 > Try coupon codes `WELCOME50` (50% off up to ₹120, min order ₹199) and `FREEDEL` (free delivery, min order ₹149).
+> **Restaurant partner:** run `npm run seed:partners` once, then open `partner.html` and log in as
+> e.g. `partner.doonbiryanihouse@foodhub.in` / `partner123` (pattern: `partner.<restaurantname>` lowercase, no spaces).
+> New customer orders pop up live with a sound alert — Accept ✅ / Reject ❌, then Mark Ready 🍳 / Delivered ✅.
 
 ## 🌐 Deployment (make it visitable by anyone)
 

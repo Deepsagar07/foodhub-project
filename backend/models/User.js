@@ -23,7 +23,9 @@ const userSchema = new mongoose.Schema(
     },
     // We store only the bcrypt hash, never the plain password
     passwordHash: { type: String, required: true },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    role: { type: String, enum: ['user', 'admin', 'restaurant'], default: 'user' },
+    // For role='restaurant': the outlet this partner account manages
+    restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', default: null },
     addresses: { type: [addressSchema], default: [] },
   },
   { timestamps: true }

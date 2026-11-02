@@ -690,6 +690,7 @@ function renderFooter() {
     + "<p>Developed by "
     + '<span class="font-semibold" style="color:var(--brand)">Deep Sagar</span> & '
     + '<span class="font-semibold" style="color:var(--brand)">Ayush Gupta</span></p>'
+    + '<p><a href="partner.html" class="hover:opacity-70" style="color:var(--brand)">🏪 Restaurant Partner Login</a></p>'
     + "</div></div>";
   document.body.appendChild(f);
 }

@@ -17,7 +17,9 @@ function signToken(user) {
 
 // Never send the password hash back to the client
 function safeUser(user) {
-  return { id: user._id, name: user.name, email: user.email, role: user.role };
+  const u = { id: user._id, name: user.name, email: user.email, role: user.role };
+  if (user.restaurant) u.restaurantId = String(user.restaurant);
+  return u;
 }
 
 // POST /api/auth/register  { name, email, password } -> 201 { token, user }

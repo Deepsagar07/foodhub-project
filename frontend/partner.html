@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Restaurant Partner</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-3xl mx-auto px-4 py-8">
+
+  <!-- ============ LOGIN VIEW ============ -->
+  <div id="login-view" class="max-w-md mx-auto">
+    <div class="surface rounded-2xl p-8" style="box-shadow:var(--shadow)">
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white mb-3" style="background:var(--brand)">🏪</div>
+        <h1 class="font-display font-bold text-2xl">Partner Login</h1>
+        <p class="text-sm text-muted mt-1">Manage your restaurant's live orders.</p>
+      </div>
+      <div class="space-y-3">
+        <input id="p-email" type="email" class="input" placeholder="Partner email" autocomplete="email">
+        <input id="p-password" type="password" class="input" placeholder="Password" autocomplete="current-password">
+        <p id="p-err" class="text-sm hidden" style="color:var(--danger)"></p>
+        <button class="btn-brand w-full" onclick="partnerLogin()">Login as Partner</button>
+      </div>
+      <p class="text-xs text-muted text-center mt-5">
+        Demo: <span class="font-medium">partner.doonbiryanihouse@foodhub.in</span> / <span class="font-medium">partner123</span><br>
+        (pattern: partner.&lt;restaurantname&gt;@foodhub.in — no spaces, lowercase)
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ PANEL VIEW ============ -->
+  <div id="panel-view" class="hidden">
+    <div class="surface rounded-2xl p-5 mb-5 flex items-center justify-between flex-wrap gap-3" style="box-shadow:var(--shadow)">
+      <div>
+        <h1 id="r-name" class="font-display font-bold text-xl">—</h1>
+        <p id="r-sub" class="text-sm text-muted">—</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="live-dot" class="text-xs font-semibold px-3 py-1.5 rounded-full" style="background:#dcfce7;color:#166534">● LIVE</span>
+        <button class="text-sm font-semibold px-3 py-1.5 rounded-xl surface hover:opacity-70" onclick="partnerLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 mb-6">
+      <div class="surface rounded-2xl p-4 text-center" style="box-shadow:var(--shadow)">
+        <p id="st-new" class="font-display font-bold text-2xl" style="color:var(--brand-dark)">0</p>
+        <p class="text-xs text-muted font-medium">New orders</p>
+      </div>
+      <div class="surface rounded-2xl p-4 text-center" style="box-shadow:var(--shadow)">
+        <p id="st-prep" class="font-display font-bold text-2xl">0</p>
+        <p class="text-xs text-muted font-medium">Preparing</p>
+      </div>
+      <div class="surface rounded-2xl p-4 text-center" style="box-shadow:var(--shadow)">
+        <p id="st-today" class="font-display font-bold text-2xl">0</p>
+        <p class="text-xs text-muted font-medium">Orders today</p>
+      </div>
+    </div>
+
+    <h2 class="font-display font-bold text-lg mb-3">🔔 New Orders <span class="text-xs font-medium text-muted">(needs accept / reject)</span></h2>
+    <div id="sec-new" class="space-y-3 mb-8"></div>
+
+    <h2 class="font-display font-bold text-lg mb-3">🍳 Preparing</h2>
+    <div id="sec-prep" class="space-y-3 mb-8"></div>
+
+    <h2 class="font-display font-bold text-lg mb-3">🛵 On the Way</h2>
+    <div id="sec-way" class="space-y-3 mb-8"></div>
+
+    <h2 class="font-display font-bold text-lg mb-3">📋 Today's History</h2>
+    <div id="sec-hist" class="space-y-3 mb-8"></div>
+  </div>
+
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/common.js"></script>
+<script>
+/* ============================================================
+   FoodHub Restaurant Partner Panel
+   Separate login (fh_partner_token) so it never clashes with
+   a customer session in the same browser.
+   ============================================================ */
+const P_TOKEN = "fh_partner_token";
+const P_USER = "fh_partner";
+let RESTAURANT_ID = null;
+let socket = null;
+let pollTimer = null;
+
+function perr(msg) {
+  const el = document.getElementById("p-err");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+/** authed fetch with the PARTNER token (401 -> back to login view) */
+async function pFetch(path, { method = "GET", body = null } = {}) {
+  const headers = { "Content-Type": "application/json" };
+  const token = localStorage.getItem(P_TOKEN);
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch(API_BASE + path, {
+    method, headers, body: body ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) { showLogin("Session expired — please log in again."); throw new Error("unauthorized"); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Request failed");
+  return data;
+}
+
+async function partnerLogin() {
+  const email = document.getElementById("p-email").value.trim();
+  const password = document.getElementById("p-password").value;
+  if (!email || !password) return perr("Enter your partner email and password.");
+  try {
+    const res = await fetch(API_BASE + "/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return perr(data.message || "Login failed.");
+    if (data.user.role !== "restaurant") {
+      return perr("This login is for restaurant partners only. Customers use the normal login page.");
+    }
+    localStorage.setItem(P_TOKEN, data.token);
+    localStorage.setItem(P_USER, JSON.stringify(data.user));
+    enterPanel();
+  } catch (e) {
+    perr("Could not reach the server. Is the backend running?");
+  }
+}
+
+function partnerLogout() {
+  localStorage.removeItem(P_TOKEN);
+  localStorage.removeItem(P_USER);
+  if (socket) { socket.disconnect(); socket = null; }
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  showLogin("");
+}
+
+function showLogin(msg) {
+  document.getElementById("login-view").classList.remove("hidden");
+  document.getElementById("panel-view").classList.add("hidden");
+  if (msg) perr(msg);
+}
+
+async function enterPanel() {
+  try {
+    const me = await pFetch("/partner/me");
+    RESTAURANT_ID = me.restaurant._id;
+    document.getElementById("r-name").textContent = me.restaurant.name;
+    document.getElementById("r-sub").textContent =
+      (me.restaurant.area ? me.restaurant.area + ", " : "") + (me.restaurant.city || "");
+    document.getElementById("st-new").textContent = me.counts.placed;
+    document.getElementById("st-prep").textContent = me.counts.preparing;
+    document.getElementById("st-today").textContent = me.counts.today;
+    document.getElementById("login-view").classList.add("hidden");
+    document.getElementById("panel-view").classList.remove("hidden");
+    await loadOrders();
+    connectSocket();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => loadOrders(true), 15000); // fallback if socket drops
+  } catch (e) {
+    if (e.message !== "unauthorized") perr("Could not load partner data.");
+  }
+}
+
+/* ---------- order list ---------- */
+
+function timeAgo(iso) {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return mins + " min ago";
+  return Math.floor(mins / 60) + "h " + (mins % 60) + "m ago";
+}
+
+function orderCard(o) {
+  const items = o.items.map((it) => `${it.qty}× ${esc(it.name)}`).join(", ");
+  const cust = (o.user && o.user.name) ? esc(o.user.name) : "Guest";
+  const idShort = String(o._id).slice(-6).toUpperCase();
+  const when = timeAgo(o.createdAt) + " · " +
+    new Date(o.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+  let actions = "";
+  if (o.status === "placed") {
+    actions = `<div class="flex gap-2 mt-3">
+      <button onclick="act('${o._id}','accept')" class="flex-1 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700">✓ Accept</button>
+      <button onclick="act('${o._id}','reject')" class="flex-1 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600">✕ Reject</button>
+    </div>`;
+  } else if (o.status === "preparing") {
+    actions = `<button onclick="act('${o._id}','ready')" class="w-full mt-3 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600">🍳 Mark Ready — Out for Delivery</button>`;
+  } else if (o.status === "on_the_way") {
+    actions = `<button onclick="act('${o._id}','delivered')" class="w-full mt-3 text-white text-sm font-bold px-4 py-2.5 rounded-xl" style="background:var(--brand)">✅ Mark Delivered</button>`;
+  }
+  const statusPill = o.status === "cancelled"
+    ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">CANCELLED</span>`
+    : o.status === "delivered"
+    ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">DELIVERED</span>`
+    : "";
+  return `<div class="surface rounded-2xl p-4" style="box-shadow:var(--shadow)">
+    <div class="flex items-center justify-between mb-1">
+      <p class="font-bold">#${idShort} <span class="text-xs font-medium text-muted">· ${when}</span></p>
+      ${statusPill}
+    </div>
+    <p class="text-sm font-medium">👤 ${cust}</p>
+    <p class="text-sm text-muted mt-1">${esc(items)}</p>
+    <p class="text-sm text-muted">📍 ${esc(o.address || "")}</p>
+    <p class="font-bold mt-2" style="color:var(--brand-dark)">${inr(o.total)} <span class="text-xs font-medium text-muted">· ${o.paymentMethod === "cod" ? "Cash on Delivery" : esc(o.paymentMethod)}</span></p>
+    ${actions}
+  </div>`;
+}
+
+const emptyBox = (msg) =>
+  `<div class="surface rounded-2xl p-6 text-center text-sm text-muted">${msg}</div>`;
+
+async function loadOrders(silent) {
+  try {
+    const orders = await pFetch("/partner/orders");
+    const by = (s) => orders.filter((o) => o.status === s);
+    const placed = by("placed"), prep = by("preparing"), way = by("on_the_way");
+    const hist = orders.filter((o) => o.status === "delivered" || o.status === "cancelled").slice(0, 20);
+    document.getElementById("sec-new").innerHTML =
+      placed.length ? placed.map(orderCard).join("") : emptyBox("No new orders — you're all caught up! 🎉");
+    document.getElementById("sec-prep").innerHTML =
+      prep.length ? prep.map(orderCard).join("") : emptyBox("Nothing cooking right now.");
+    document.getElementById("sec-way").innerHTML =
+      way.length ? way.map(orderCard).join("") : emptyBox("No riders out right now.");
+    document.getElementById("sec-hist").innerHTML =
+      hist.length ? hist.map(orderCard).join("") : emptyBox("No completed orders today yet.");
+    document.getElementById("st-new").textContent = placed.length;
+    document.getElementById("st-prep").textContent = prep.length;
+  } catch (e) {
+    if (!silent && e.message !== "unauthorized") toast("Could not refresh orders.", "error");
+  }
+}
+
+async function act(id, action) {
+  const labels = { accept: "Accept", reject: "Reject", ready: "mark ready", delivered: "mark delivered" };
+  if (action === "reject" && !confirm("Reject this order? The customer will be notified.")) return;
+  try {
+    await pFetch(`/partner/orders/${id}/${action}`, { method: "PATCH" });
+    toast(`Order ${labels[action]}ed.`, "success");
+    loadOrders();
+  } catch (e) {
+    toast(e.message || "Action failed.", "error");
+  }
+}
+
+/* ---------- real-time ---------- */
+
+let audioCtx = null;
+function beep() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784].forEach((f, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.frequency.value = f; o.type = "sine";
+      const t = audioCtx.currentTime + i * 0.18;
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.exponentialRampToValueAtTime(0.5, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      o.start(t); o.stop(t + 0.18);
+    });
+  } catch (e) { /* audio not available — visual alert still works */ }
+}
+
+function connectSocket() {
+  try {
+    if (socket) socket.disconnect();
+    socket = io(API_ORIGIN, { transports: ["websocket", "polling"] });
+    socket.emit("join-restaurant", RESTAURANT_ID);
+    socket.on("new-order", () => {
+      beep();
+      toast("🔔 New order received!", "success");
+      loadOrders();
+    });
+    socket.on("order-status", () => loadOrders(true)); // e.g. admin changed a status
+    socket.on("connect", () => {
+      const d = document.getElementById("live-dot");
+      if (d) { d.textContent = "● LIVE"; d.style.background = "#dcfce7"; d.style.color = "#166534"; }
+    });
+    socket.on("disconnect", () => {
+      const d = document.getElementById("live-dot");
+      if (d) { d.textContent = "● POLLING"; d.style.background = "#fef3c7"; d.style.color = "#92400e"; }
+    });
+  } catch (e) { /* polling fallback keeps it working */ }
+}
+
+/* ---------- boot ---------- */
+initCommon();
+if (localStorage.getItem(P_TOKEN)) enterPanel();
+</script>
+</body>
+</html>

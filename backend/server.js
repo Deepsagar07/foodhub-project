@@ -39,6 +39,7 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/stats', require('./routes/stats')); // public live counters (no auth)
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/partner', require('./routes/partner')); // restaurant-side order management
 
 // Simple health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -61,6 +62,10 @@ io.on('connection', (socket) => {
   // track.html joins its order's room: socket.emit('join-order', orderId)
   socket.on('join-order', (orderId) => {
     if (orderId) socket.join('order:' + orderId);
+  });
+  // partner.html joins its restaurant's room: socket.emit('join-restaurant', restaurantId)
+  socket.on('join-restaurant', (restaurantId) => {
+    if (restaurantId) socket.join('restaurant:' + restaurantId);
   });
 });
 

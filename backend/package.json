@@ -20,6 +20,7 @@
     "dev": "nodemon server.js",
     "seed": "node seed/seed.js",
     "seed:patna": "node seed/seed-patna.js",
+    "seed:partners": "node seed/seed-partners.js",
     "start": "node server.js"
   },
   "version": "1.0.0",

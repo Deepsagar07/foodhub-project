@@ -89,6 +89,18 @@ const createOrder = asyncHandler(async (req, res) => {
     paymentMethod: paymentMethod || 'cod',
   });
 
+  // Notify the restaurant's partner panel in real time (it beeps on 'new-order')
+  const io = req.app.get('io');
+  if (io) {
+    io.to('restaurant:' + restaurant._id).emit('new-order', {
+      orderId: String(order._id),
+      items: orderItems.length,
+      total: order.total,
+      address: order.address,
+      createdAt: order.createdAt,
+    });
+  }
+
   res.status(201).json(order);
 });
 
