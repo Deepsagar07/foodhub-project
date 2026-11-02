@@ -17,6 +17,7 @@ const reviewSchema = new mongoose.Schema(
       max: [5, 'Rating cannot be more than 5'],
     },
     comment: { type: String, default: '', trim: true },
+    photo: { type: String, default: '' }, // optional food photo: /uploads/<file> or URL
   },
   { timestamps: true }
 );

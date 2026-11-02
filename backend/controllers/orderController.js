@@ -119,6 +119,11 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   }
   const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true });
   if (!order) return res.status(404).json({ message: 'Order not found' });
+  // Push the new status to anyone watching this order on track.html (real-time)
+  req.app.get('io').to('order:' + order._id).emit('order-status', {
+    orderId: String(order._id),
+    status: order.status,
+  });
   res.json(order);
 });
 

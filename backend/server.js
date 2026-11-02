@@ -5,6 +5,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { securityHeaders, rateLimit } = require('./middleware/security');
@@ -35,6 +37,7 @@ app.use('/api/restaurants/:id/reviews', require('./routes/reviews'));
 app.use('/api/menu', require('./routes/menu'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/coupons', require('./routes/coupons'));
+app.use('/api/stats', require('./routes/stats')); // public live counters (no auth)
 app.use('/api/admin', require('./routes/admin'));
 
 // Simple health check
@@ -47,4 +50,18 @@ app.use((req, res) => res.status(404).json({ message: 'Route not found' }));
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// --- Real-time order tracking (socket.io) ---
+// The HTTP server wraps Express so websockets share the same port.
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+app.set('io', io); // controllers reach it via req.app.get('io')
+
+io.on('connection', (socket) => {
+  // track.html joins its order's room: socket.emit('join-order', orderId)
+  socket.on('join-order', (orderId) => {
+    if (orderId) socket.join('order:' + orderId);
+  });
+});
+
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

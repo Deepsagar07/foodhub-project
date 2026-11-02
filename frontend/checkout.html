@@ -43,22 +43,15 @@
         </div>
       </section>
 
-      <!-- Payment method (mock — no real gateway in this build) -->
+      <!-- Payment method: COD only (online payments coming later) -->
       <section class="surface rounded-2xl p-5" style="box-shadow:var(--shadow)">
         <h2 class="font-display font-semibold mb-3">💳 Payment Method</h2>
         <div class="space-y-2 text-sm font-medium">
           <label class="surface rounded-xl p-3 flex items-center gap-3 cursor-pointer">
-            <input type="radio" name="pay" value="upi" class="w-4 h-4 accent-orange-500" checked>
-            <span>📱 UPI <span class="text-xs text-muted">(mock)</span></span>
-          </label>
-          <label class="surface rounded-xl p-3 flex items-center gap-3 cursor-pointer">
-            <input type="radio" name="pay" value="card" class="w-4 h-4 accent-orange-500">
-            <span>💳 Card <span class="text-xs text-muted">(mock)</span></span>
-          </label>
-          <label class="surface rounded-xl p-3 flex items-center gap-3 cursor-pointer">
-            <input type="radio" name="pay" value="cod" class="w-4 h-4 accent-orange-500">
+            <input type="radio" name="pay" value="cod" class="w-4 h-4 accent-orange-500" checked>
             <span>💵 Cash on Delivery</span>
           </label>
+          <p class="text-xs text-muted">Online payments (UPI/Card) coming soon.</p>
         </div>
       </section>
     </div>
@@ -88,6 +81,12 @@ async function init() {
   const c = Cart.get();
   if (!c || Object.keys(c.items).length === 0) {
     location.href = "cart.html";   // nothing to check out
+    return;
+  }
+  // Serviceability: only Dehradun + Patna can check out right now
+  if (getSavedLocation() && !getServiceCity()) {
+    toast("Sorry — we're coming soon to your area! Currently delivering in Dehradun & Patna.", "error");
+    setTimeout(() => location.href = "index.html", 1800);
     return;
   }
   // prefill name from profile

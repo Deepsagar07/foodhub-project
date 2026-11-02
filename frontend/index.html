@@ -74,11 +74,11 @@
         </div>
         <div class="min-w-full p-8 md:p-10 text-white flex flex-col md:flex-row md:items-center justify-between gap-4" style="background:linear-gradient(135deg,#7c3aed,#4c1d95)">
           <div>
-            <p class="text-xs font-bold tracking-widest uppercase opacity-80">FoodHub app</p>
-            <h3 class="font-display font-extrabold text-3xl md:text-4xl mt-1">App-only deals</h3>
-            <p class="opacity-90 mt-1 text-sm md:text-base">Faster checkout & live tracking on the go</p>
+            <p class="text-xs font-bold tracking-widest uppercase opacity-80">Real-time updates</p>
+            <h3 class="font-display font-extrabold text-3xl md:text-4xl mt-1">Live Order Tracking</h3>
+            <p class="opacity-90 mt-1 text-sm md:text-base">Watch your food go from kitchen to doorstep, live</p>
           </div>
-          <a href="#get-app" class="bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl whitespace-nowrap">Get the App →</a>
+          <a href="orders.html" class="bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl whitespace-nowrap">Track Order →</a>
         </div>
       </div>
       <div id="banner-dots" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2"></div>
@@ -86,13 +86,20 @@
   </section>
 
   <!-- Restaurant grid -->
-  <div class="flex items-center justify-between gap-3 mb-4">
+  <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
     <h2 class="font-display font-bold text-xl"><span id="res-count">0</span> restaurants near you</h2>
-    <select id="sort" onchange="loadRestaurants()" class="input !w-auto text-sm font-medium">
-      <option value="relevance">Sort: Popular</option>
-      <option value="rating">Sort: Rating</option>
-      <option value="fastest">Sort: Fastest delivery</option>
-    </select>
+    <div class="flex items-center gap-2">
+      <select id="min-rating" onchange="loadRestaurants()" class="input !w-auto text-sm font-medium">
+        <option value="0">Any rating</option>
+        <option value="4">⭐ 4.0+</option>
+        <option value="4.5">⭐ 4.5+</option>
+      </select>
+      <select id="sort" onchange="loadRestaurants()" class="input !w-auto text-sm font-medium">
+        <option value="relevance">Sort: Popular</option>
+        <option value="rating">Sort: Rating</option>
+        <option value="fastest">Sort: Fastest delivery</option>
+      </select>
+    </div>
   </div>
   <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
   <div id="empty" class="hidden text-center py-16 text-muted">
@@ -100,46 +107,12 @@
     <p>No restaurants found. Try another search.</p>
   </div>
 
-  <!-- Trust stats band -->
+  <!-- Trust stats band: real live numbers from /api/stats -->
   <section class="mt-12 rounded-3xl p-8 text-white text-center" style="background:linear-gradient(135deg,#1c1917,#57534e)">
     <div class="grid grid-cols-3 gap-4">
-      <div><p class="font-display font-extrabold text-2xl md:text-4xl">2L+</p><p class="text-white/70 text-xs md:text-sm mt-1">Orders delivered</p></div>
-      <div><p class="font-display font-extrabold text-2xl md:text-4xl">500+</p><p class="text-white/70 text-xs md:text-sm mt-1">Partner restaurants</p></div>
-      <div><p class="font-display font-extrabold text-2xl md:text-4xl">4.8★</p><p class="text-white/70 text-xs md:text-sm mt-1">Average rating</p></div>
-    </div>
-  </section>
-
-  <!-- Get the app -->
-  <section id="get-app" class="mt-12 grid md:grid-cols-2 gap-8 items-center surface rounded-3xl p-8" style="box-shadow:var(--shadow)">
-    <div>
-      <h2 class="font-display font-bold text-2xl mb-2">Get the FoodHub app</h2>
-      <p class="text-muted text-sm mb-5">App-only deals, one-tap reorder and live order tracking on the go.</p>
-      <div class="flex flex-wrap gap-3">
-        <a href="#" class="flex items-center gap-2 bg-black text-white rounded-xl px-4 py-2.5">
-          <span class="text-2xl">▶</span>
-          <span class="leading-tight text-left"><span class="block text-[10px] uppercase opacity-70">Get it on</span><span class="block font-semibold">Google Play</span></span>
-        </a>
-        <a href="#" class="flex items-center gap-2 bg-black text-white rounded-xl px-4 py-2.5">
-          <span class="text-2xl">🍎</span>
-          <span class="leading-tight text-left"><span class="block text-[10px] uppercase opacity-70">Download on the</span><span class="block font-semibold">App Store</span></span>
-        </a>
-      </div>
-    </div>
-    <div class="flex justify-center">
-      <div class="w-52 h-96 rounded-[2rem] border-8 border-gray-900 bg-white overflow-hidden flex flex-col">
-        <div class="px-3 py-2.5 flex items-center gap-1.5" style="background:#f97316">
-          <span class="text-white font-bold text-sm">🍔 FoodHub</span>
-        </div>
-        <div class="px-3 py-2"><div class="bg-gray-100 rounded-lg text-[10px] text-gray-400 px-2 py-1.5">Search restaurants…</div></div>
-        <div class="flex-1 px-3 space-y-2">
-          <div class="flex gap-2 items-center bg-gray-50 rounded-xl p-2"><span class="text-2xl">🍕</span><div class="flex-1"><p class="text-[11px] font-semibold text-gray-900">Pizza Palace</p><p class="text-[10px] text-gray-500">⭐ 4.2 • 25-35 min</p></div></div>
-          <div class="flex gap-2 items-center bg-gray-50 rounded-xl p-2"><span class="text-2xl">🍜</span><div class="flex-1"><p class="text-[11px] font-semibold text-gray-900">Dragon Wok</p><p class="text-[10px] text-gray-500">⭐ 4.3 • 20-30 min</p></div></div>
-          <div class="flex gap-2 items-center bg-gray-50 rounded-xl p-2"><span class="text-2xl">🍔</span><div class="flex-1"><p class="text-[11px] font-semibold text-gray-900">Burger Barn</p><p class="text-[10px] text-gray-500">⭐ 4.1 • 20-30 min</p></div></div>
-        </div>
-        <div class="border-t border-gray-200 grid grid-cols-4 text-center text-[9px] text-gray-500 py-2">
-          <span>🏠<br>Home</span><span>🔍<br>Search</span><span>🛒<br>Cart</span><span>👤<br>Profile</span>
-        </div>
-      </div>
+      <div><p class="font-display font-extrabold text-2xl md:text-4xl" id="stat-dishes">–</p><p class="text-white/70 text-xs md:text-sm mt-1">Dishes on the menu</p></div>
+      <div><p class="font-display font-extrabold text-2xl md:text-4xl" id="stat-restaurants">–</p><p class="text-white/70 text-xs md:text-sm mt-1">Partner restaurants</p></div>
+      <div><p class="font-display font-extrabold text-2xl md:text-4xl" id="stat-rating">–</p><p class="text-white/70 text-xs md:text-sm mt-1">Average rating</p></div>
     </div>
   </section>
 </main>
@@ -241,14 +214,38 @@ async function loadRestaurants(search) {
       cuisine: activeCuisine === "All" ? "" : activeCuisine,
     }));
     const list = data.restaurants || data || [];
-    sortRestaurants(list);
-    document.getElementById("res-count").textContent = list.length;
-    if (list.length === 0) {
+    // Serviceability: only Dehradun + Patna are live.
+    const serviceCity = getServiceCity();
+    const hasLoc = !!getSavedLocation();
+    if (hasLoc && !serviceCity) {
+      // Outside our cities -> "Coming soon" instead of restaurants
+      const loc = getSavedLocation();
+      const area = (loc.area ? loc.area + ", " : "") + (loc.city || "your area");
+      document.getElementById("res-count").textContent = "0";
+      grid.innerHTML = `<div class="col-span-full text-center py-16">
+        <div class="text-5xl mb-4">🚧</div>
+        <h3 class="font-display font-bold text-xl mb-2">Coming soon to ${esc(area)}!</h3>
+        <p class="text-muted text-sm mb-6">We're currently delivering in <b>Dehradun</b> & <b>Patna</b> (Bailey Road, Kankarbagh).</p>
+        <div class="flex flex-wrap justify-center gap-2">
+          <button onclick="setLocality('Rajpur Road')" class="text-sm font-semibold px-4 py-2 rounded-xl btn-brand">Try Dehradun</button>
+          <button onclick="setPatnaLocality('Bailey Road')" class="text-sm font-semibold px-4 py-2 rounded-xl btn-brand">Try Patna</button>
+        </div></div>`;
+      document.getElementById("empty").classList.add("hidden");
+      return;
+    }
+    // Filter restaurants to the user's service city (missing city = Dehradun, backfilled)
+    const cityList = serviceCity ? list.filter(r => (r.city || "Dehradun") === serviceCity) : list;
+    // min-rating filter (client-side)
+    const minR = parseFloat(document.getElementById("min-rating").value) || 0;
+    const filtered = minR > 0 ? cityList.filter(r => (r.rating || 0) >= minR) : cityList;
+    sortRestaurants(filtered);
+    document.getElementById("res-count").textContent = filtered.length;
+    if (filtered.length === 0) {
       grid.innerHTML = "";
       document.getElementById("empty").classList.remove("hidden");
       return;
     }
-    grid.innerHTML = list.map(card).join("");
+    grid.innerHTML = filtered.map(card).join("");
   } catch (e) {
     grid.innerHTML = `<div class="col-span-full text-center py-16 text-muted">
       <div class="text-5xl mb-3">⚠️</div><p>Could not load restaurants.<br>Is the backend running on port 5000?</p>
@@ -301,6 +298,18 @@ renderTiles();
 goBanner(0);
 initCommon();
 loadRestaurants("");
+loadStats();
+
+/** Trust band: fill with real live numbers from the backend (no fake stats). */
+async function loadStats() {
+  try {
+    const s = await apiFetch("/stats");
+    document.getElementById("stat-dishes").textContent = s.dishes ?? "–";
+    document.getElementById("stat-restaurants").textContent = s.restaurants ?? "–";
+    document.getElementById("stat-rating").textContent =
+      s.avgRating ? s.avgRating + "★" : "–";
+  } catch (e) { /* keep the "–" placeholders if the API is unreachable */ }
+}
 
 </script>
 </body>

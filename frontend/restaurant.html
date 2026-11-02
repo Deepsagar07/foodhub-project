@@ -24,13 +24,21 @@
 <main class="max-w-5xl mx-auto px-4 py-6">
   <div id="header"></div>
 
-  <!-- Menu controls: veg-only toggle -->
-  <div class="flex items-center justify-between mt-8 mb-4">
+  <!-- Menu controls: veg-only toggle + price filter -->
+  <div class="flex items-center justify-between mt-8 mb-4 flex-wrap gap-3">
     <h2 class="font-display font-bold text-xl">Menu</h2>
-    <label class="flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
-      <input type="checkbox" id="veg-only" class="w-4 h-4 accent-green-600" onchange="renderMenu()">
-      <span class="veg-mark"></span> Veg only
-    </label>
+    <div class="flex items-center gap-4">
+      <select id="price-filter" class="text-sm font-medium rounded-xl px-3 py-1.5 surface border" style="border-color:var(--border)" onchange="renderMenu()">
+        <option value="all">All prices</option>
+        <option value="u150">Under ₹150</option>
+        <option value="150to250">₹150 – ₹250</option>
+        <option value="a250">Above ₹250</option>
+      </select>
+      <label class="flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
+        <input type="checkbox" id="veg-only" class="w-4 h-4 accent-green-600" onchange="renderMenu()">
+        <span class="veg-mark"></span> Veg only
+      </label>
+    </div>
   </div>
   <div id="menu"></div>
 
@@ -105,10 +113,18 @@ function toggleFavRestaurant() {
   renderHeader();
 }
 
-/** Group menu by category, apply veg filter, render ADD buttons / steppers */
+/** Group menu by category, apply veg + price filters, render ADD buttons / steppers */
 function renderMenu() {
   const vegOnly = document.getElementById("veg-only").checked;
-  const items = MENU.filter(i => !vegOnly || i.veg || i.isVeg);
+  const priceF = document.getElementById("price-filter").value;
+  const items = MENU.filter(i => {
+    if (vegOnly && !(i.veg || i.isVeg)) return false;
+    const p = Number(i.price) || 0;
+    if (priceF === "u150" && p >= 150) return false;
+    if (priceF === "150to250" && (p < 150 || p > 250)) return false;
+    if (priceF === "a250" && p <= 250) return false;
+    return true;
+  });
   const wrap = document.getElementById("menu");
 
   if (items.length === 0) {
@@ -208,6 +224,7 @@ async function loadReviews() {
           <p class="font-semibold text-sm">${esc(r.userName || r.user?.name || "Customer")}</p>
           <span class="text-xs font-bold px-2 py-0.5 rounded-lg text-white" style="background:var(--success)">⭐ ${r.rating}/5</span>
         </div>
+        ${r.photo ? `<img src="${esc(imgUrl(r.photo))}" alt="Review photo" class="rounded-xl mt-2 w-full max-h-56 object-cover" loading="lazy" onerror="this.remove()">` : ""}
         <p class="text-sm mt-1">${esc(r.comment)}</p>
         <p class="text-xs text-muted mt-1">${new Date(r.createdAt || Date.now()).toLocaleDateString("en-IN")}</p>
       </div>`).join("");
@@ -233,6 +250,10 @@ function renderReviewForm() {
       </select>
     </div>
     <textarea id="rev-comment" rows="3" class="input mb-3" placeholder="How was the food?"></textarea>
+    <label class="flex items-center gap-2 text-sm text-muted mb-3 cursor-pointer">
+      📷 <span>Add a food photo (optional)</span>
+      <input type="file" id="rev-photo" accept="image/*" class="text-xs">
+    </label>
     <button class="btn-brand" onclick="submitReview()">Submit Review</button>`;
 }
 
@@ -241,9 +262,20 @@ async function submitReview() {
   const comment = document.getElementById("rev-comment").value.trim();
   if (!comment) return toast("Please write something first.", "error");
   try {
-    await apiFetch("/restaurants/" + RID + "/reviews", {
-      method: "POST", auth: true, body: { rating, comment },
+    // FormData (not apiFetch) so the optional photo uploads as multipart
+    const fd = new FormData();
+    fd.append("rating", rating);
+    fd.append("comment", comment);
+    const photoInput = document.getElementById("rev-photo");
+    if (photoInput && photoInput.files[0]) fd.append("photo", photoInput.files[0]);
+    const headers = {};
+    const token = localStorage.getItem("fh_token");
+    if (token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + "/restaurants/" + RID + "/reviews", {
+      method: "POST", headers, body: fd,
     });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Could not post review");
     toast("Review posted!", "success");
     loadReviews();
     renderReviewForm();

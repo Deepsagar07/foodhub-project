@@ -3,10 +3,13 @@
 const Restaurant = require('../models/Restaurant');
 const Review = require('../models/Review');
 const asyncHandler = require('../middleware/asyncHandler');
+const { fileUrl } = require('../middleware/upload');
 
-// POST /api/restaurants/:id/reviews (protect)  { rating, comment } -> 201
+// POST /api/restaurants/:id/reviews (protect)  { rating, comment } + optional photo -> 201
 const addReview = asyncHandler(async (req, res) => {
-  const { rating, comment } = req.body;
+  // multipart/form-data sends fields as strings, so coerce rating to a number
+  const rating = Number(req.body.rating);
+  const comment = req.body.comment;
 
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     return res.status(400).json({ message: 'Rating must be an integer between 1 and 5' });
@@ -22,6 +25,7 @@ const addReview = asyncHandler(async (req, res) => {
     restaurant: restaurant._id,
     rating,
     comment: comment ? String(comment).trim() : '',
+    photo: req.file ? fileUrl(req.file) : '',
   });
 
   // Recalculate the restaurant's average rating from all its reviews

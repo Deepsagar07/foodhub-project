@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 const MenuItem = require('../models/MenuItem');
 const asyncHandler = require('../middleware/asyncHandler');
+const { fileUrl } = require('../middleware/upload');
 
 // GET /api/admin/stats (admin) -> dashboard numbers
 const getStats = asyncHandler(async (req, res) => {
@@ -58,7 +59,7 @@ const createMenuItem = asyncHandler(async (req, res) => {
   if (!restaurant) return res.status(404).json({ message: 'Restaurant not found' });
 
   // Prefer the uploaded file if one was sent, otherwise use the image URL
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : (image || '');
+  const imageUrl = req.file ? fileUrl(req.file) : (image || '');
 
   const item = await MenuItem.create({
     restaurant: restaurant._id,
@@ -88,7 +89,7 @@ const updateMenuItem = asyncHandler(async (req, res) => {
     }
     updates.price = priceNum;
   }
-  if (req.file) updates.image = `/uploads/${req.file.filename}`;
+  if (req.file) updates.image = fileUrl(req.file);
 
   const item = await MenuItem.findByIdAndUpdate(req.params.id, updates, {
     new: true,

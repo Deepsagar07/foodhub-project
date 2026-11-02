@@ -11,6 +11,7 @@ const restaurantSchema = new mongoose.Schema(
     deliveryTime: { type: String, default: '30-40 min' }, // display string, e.g. "25-35 min"
     deliveryFee: { type: Number, default: 0, min: 0 }, // in rupees
     address: { type: String, default: '' },
+    city: { type: String, default: 'Dehradun', trim: true, index: true }, // service city: Dehradun | Patna
   },
   { timestamps: true }
 );

@@ -31,6 +31,7 @@
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/common.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 requireAuth();
 
@@ -153,7 +154,19 @@ if (!OID) {
 } else {
   document.getElementById("content").innerHTML = skeletonLines(5);
   load();
-  timer = setInterval(load, 10000);   // live tracking: refresh every 10s
+  timer = setInterval(load, 10000);   // fallback polling: refresh every 10s
+  // Real-time: the server pushes status changes instantly over websocket.
+  // If the socket fails, the 10s polling above keeps tracking working.
+  try {
+    const socket = io(API_ORIGIN, { transports: ["websocket", "polling"] });
+    socket.on("connect", () => socket.emit("join-order", OID));
+    socket.on("order-status", (data) => {
+      if (data && data.status) {
+        load();                       // re-fetch + re-render with the new status
+        toast("Order update: " + data.status.replace(/_/g, " "), "success");
+      }
+    });
+  } catch (e) { /* websocket unavailable — polling covers it */ }
 }
 </script>
 </body>

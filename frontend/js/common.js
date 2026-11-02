@@ -329,6 +329,36 @@ function setLocality(name) {
   geocodeAndSave(name + ", Dehradun, Uttarakhand, India", name);
 }
 
+/** Footer locality pills: set the delivery location to that Patna area. */
+function setPatnaLocality(name) {
+  geocodeAndSave(name + ", Patna, Bihar, India", name);
+}
+
+/* ---------------- Serviceability: Dehradun + Patna only ---------------- */
+
+/** Cities/areas where FoodHub delivers. Everything else -> "Coming soon". */
+const SERVICEABLE = {
+  Dehradun: ["Rajpur Road", "Jakhan", "Sahastradhara Road", "Ballupur", "Clock Tower", "Dalanwala", "Vasant Vihar", "Patel Nagar", "Prem Nagar", "Raipur", "Clement Town", "Mussoorie Road"],
+  Patna: ["Bailey Road", "Kankarbagh"],
+};
+
+/**
+ * Which service city the saved location belongs to: "Dehradun" | "Patna" | null.
+ * null = no location saved yet, or the area is outside our service cities
+ * (the site then shows a "Coming soon" state instead of restaurants).
+ */
+function getServiceCity() {
+  const loc = getSavedLocation();
+  if (!loc) return null;
+  const hay = ((loc.area || "") + " " + (loc.city || "")).toLowerCase();
+  if (/patna|bailey|kankarbagh/.test(hay)) return "Patna";
+  if (/dehradun/.test(hay)) return "Dehradun";
+  for (const area of SERVICEABLE.Dehradun) {
+    if (hay.includes(area.toLowerCase())) return "Dehradun";
+  }
+  return null;
+}
+
 /**
  * Geocode a query via Nominatim, save as the delivery location.
  * Returns a Promise<loc|null>.
@@ -578,21 +608,27 @@ function renderFooter() {
     + "</div></div>"
     + '<div><h4 class="font-display font-semibold mb-3">Contact</h4>'
     + '<div class="space-y-2 text-muted">'
-    + "<p>📧 hello@foodhub.in</p><p>📞 1800-419-0000</p><p>📍 Dehradun, India</p>"
+    + "<p>📧 hello@foodhub.in</p><p>📞 1800-419-0000</p><p>📍 Dehradun & Patna, India</p>"
     + "</div></div>"
     + "</div>"
     + '<div class="max-w-7xl mx-auto px-4 pb-8">'
-    + '<h4 class="font-display font-semibold mb-3 text-sm">Delivering across Dehradun</h4>'
-    + '<div class="flex flex-wrap gap-2">'
+    + '<h4 class="font-display font-semibold mb-3 text-sm">Delivering across Dehradun & Patna</h4>'
+    + '<p class="text-xs text-muted mb-2 font-medium">Dehradun</p>'
+    + '<div class="flex flex-wrap gap-2 mb-3">'
     + ["Rajpur Road", "Jakhan", "Sahastradhara Road", "Ballupur", "Clock Tower", "Dalanwala", "Vasant Vihar", "Patel Nagar", "Prem Nagar", "Raipur", "Clement Town", "Mussoorie Road"]
         .map(c => '<button onclick="setLocality(\'' + c + '\')" class="text-xs px-3 py-1.5 rounded-full surface text-muted hover:opacity-70 hover:ring-1 hover:ring-orange-500" title="Set delivery location to ' + c + '">' + c + "</button>").join("")
+    + '</div>'
+    + '<p class="text-xs text-muted mb-2 font-medium">Patna</p>'
+    + '<div class="flex flex-wrap gap-2">'
+    + ["Bailey Road", "Kankarbagh"]
+        .map(c => '<button onclick="setPatnaLocality(\'' + c + '\')" class="text-xs px-3 py-1.5 rounded-full surface text-muted hover:opacity-70 hover:ring-1 hover:ring-orange-500" title="Set delivery location to ' + c + ", Patna" + '">' + c + ", Patna</button>").join("")
     + "</div></div>"
     + '<div class="border-t" style="border-color:var(--border)">'
     + '<div class="max-w-7xl mx-auto px-4 py-4 text-center text-xs text-muted space-y-1">'
     + "<p>© 2026 FoodHub · All rights reserved</p>"
     + "<p>FSSAI Lic. No. 10012043001234</p>"
     + "<p>Built as a Frontend Engineering course project</p>"
-    + "<p>Built by "
+    + "<p>Developed by "
     + '<span class="font-semibold" style="color:var(--brand)">Deep Sagar</span> & '
     + '<span class="font-semibold" style="color:var(--brand)">Ayush Gupta</span></p>'
     + "</div></div>";
