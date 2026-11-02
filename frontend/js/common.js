@@ -326,12 +326,28 @@ function setManualLocation() {
 
 /** Footer locality pills: set the delivery location to that Dehradun area. */
 function setLocality(name) {
-  geocodeAndSave(name + ", Dehradun, Uttarakhand, India", name);
+  geocodeAndSave(name + ", Dehradun, Uttarakhand, India", name).then(afterLocationSet);
 }
 
 /** Footer locality pills: set the delivery location to that Patna area. */
 function setPatnaLocality(name) {
-  geocodeAndSave(name + ", Patna, Bihar, India", name);
+  geocodeAndSave(name + ", Patna, Bihar, India", name).then(afterLocationSet);
+}
+
+/**
+ * After a footer pill sets the location, show that area's restaurants.
+ * On the homepage the grid reloads in place and smooth-scrolls into view;
+ * from any other page we go to the homepage.
+ */
+function afterLocationSet(loc) {
+  if (!loc) return; // geocode failed; error toast already shown
+  if (typeof loadRestaurants === "function") {
+    loadRestaurants();
+    var grid = document.getElementById("grid");
+    if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    window.location.href = "index.html";
+  }
 }
 
 /* ---------------- Serviceability: Dehradun + Patna only ---------------- */
