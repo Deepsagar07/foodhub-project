@@ -95,7 +95,7 @@ function render() {
       <div class="flex items-center gap-2">
         <span class="stepper-btn" onclick="chQty('${i._id}', ${i.qty - 1})">−</span>
         <span class="font-bold w-5 text-center">${i.qty}</span>
-        <span class="stepper-btn" onclick="chQty('${i._id}', ${i.qty + 1})">+</span>
+        ${i.qty >= MAX_QTY_PER_ITEM ? "" : `<span class="stepper-btn" onclick="chQty('${i._id}', ${i.qty + 1})">+</span>`}
       </div>
     </div>`).join("");
 

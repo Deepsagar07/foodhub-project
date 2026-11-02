@@ -44,7 +44,7 @@
     <div class="space-y-4">
       <div class="surface rounded-2xl p-5 flex gap-4 items-start" style="box-shadow:var(--shadow)">
         <span class="text-2xl">📧</span>
-        <div><h3 class="font-semibold">Email</h3><p class="text-sm text-muted">hello@foodhub.in<br><span class="text-xs">Replies within 24 hours</span></p></div>
+        <div><h3 class="font-semibold">Email</h3><p class="text-sm text-muted">deepakmarandi2005@gmail.com<br><span class="text-xs">Replies within 24 hours</span></p></div>
       </div>
       <div class="surface rounded-2xl p-5 flex gap-4 items-start" style="box-shadow:var(--shadow)">
         <span class="text-2xl">📞</span>
@@ -76,8 +76,11 @@
 <script src="js/auth.js"></script>
 <script src="js/common.js"></script>
 <script>
-/** Compose the message into the user's own email app (no backend needed). */
-function sendMessage(e) {
+/** Send the message straight to our inbox via FormSubmit (free, no backend needed).
+ * First-ever submission triggers a one-time activation email to our address —
+ * click its link once, and every later message lands directly in the inbox.
+ * Falls back to the visitor's email app if the send fails. */
+async function sendMessage(e) {
   e.preventDefault();
   const name = document.getElementById("c-name").value.trim();
   const email = document.getElementById("c-email").value.trim();
@@ -85,9 +88,34 @@ function sendMessage(e) {
   const msg = document.getElementById("c-msg").value.trim();
   if (!name || !email || !msg) return toast("Please fill your name, email and message.", "error");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast("Please enter a valid email address.", "error");
-  const body = encodeURIComponent("Name: " + name + "\nEmail: " + email + "\n\n" + msg);
-  window.location.href = "mailto:hello@foodhub.in?subject=" + encodeURIComponent(subject || ("Message from " + name)) + "&body=" + body;
-  toast("Opening your email app…", "success");
+  const body = "Name: " + name + "\nEmail: " + email + "\n\n" + msg;
+  const btn = e.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+  try {
+    const res = await fetch("https://formsubmit.co/ajax/deepakmarandi2005@gmail.com", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({
+        name: name,
+        email: email,
+        _subject: "FoodHub Contact: " + (subject || ("Message from " + name)),
+        _captcha: "false",
+        message: body,
+      }),
+    });
+    if (!res.ok) throw new Error("send failed");
+    toast("Message sent! We'll reply within 24 hours.", "success");
+    document.getElementById("c-name").value = "";
+    document.getElementById("c-email").value = "";
+    document.getElementById("c-subject").value = "";
+    document.getElementById("c-msg").value = "";
+  } catch (err) {
+    // Fallback: open the visitor's email app with the message pre-filled
+    window.location.href = "mailto:deepakmarandi2005@gmail.com?subject=" + encodeURIComponent(subject || ("Message from " + name)) + "&body=" + encodeURIComponent(body);
+    toast("Could not send directly — opening your email app…", "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Send Message →"; }
+  }
 }
 
 initCommon();

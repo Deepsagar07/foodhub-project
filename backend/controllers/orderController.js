@@ -55,8 +55,9 @@ const createOrder = asyncHandler(async (req, res) => {
     if (!menuItem.isAvailable) {
       return res.status(400).json({ message: `Item "${menuItem.name}" is currently unavailable` });
     }
-    // Snapshot name + price so the order is unaffected by later menu edits
-    orderItems.push({ menuItem: menuItem._id, name: menuItem.name, price: menuItem.price, qty: it.qty });
+    // Snapshot name + price so the order is unaffected by later menu edits.
+    // Cap quantity per item (frontend also enforces this; this is the safety net).
+    orderItems.push({ menuItem: menuItem._id, name: menuItem.name, price: menuItem.price, qty: Math.min(it.qty, 5) });
   }
 
   const subtotal = orderItems.reduce((sum, it) => sum + it.price * it.qty, 0);

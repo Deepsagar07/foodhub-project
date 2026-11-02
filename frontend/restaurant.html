@@ -155,7 +155,7 @@ function menuItem(i) {
     : `<div class="flex items-center gap-2">
          <span class="stepper-btn" onclick='setDishQty(${JSON.stringify(id)}, ${qty - 1})'>−</span>
          <span class="font-bold w-5 text-center">${qty}</span>
-         <span class="stepper-btn" onclick='setDishQty(${JSON.stringify(id)}, ${qty + 1})'>+</span>
+         ${qty >= MAX_QTY_PER_ITEM ? "" : `<span class="stepper-btn" onclick='setDishQty(${JSON.stringify(id)}, ${qty + 1})'>+</span>`}
        </div>`;
 
   return `<div class="surface rounded-2xl p-3 flex gap-4 items-center">

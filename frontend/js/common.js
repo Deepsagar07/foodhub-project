@@ -85,7 +85,11 @@ window.imgFallback = imgFallback;
    localStorage "fh_cart":
    { restaurantId, items: { menuItemId: { _id,name,price,image,veg,qty } } }
    Rule: one restaurant per cart. Mixing triggers a replace warning.
+   Rule: max 5 units of the same item per order.
 ------------------------------------------------ */
+
+/** Maximum units of one menu item in a single order. */
+const MAX_QTY_PER_ITEM = 5;
 
 const Cart = {
   KEY: "fh_cart",
@@ -133,6 +137,10 @@ const Cart = {
     if (!c) c = { restaurantId, items: {} };
     const key = String(item._id || item.id);
     if (c.items[key]) {
+      if (c.items[key].qty >= MAX_QTY_PER_ITEM) {
+        toast("Maximum " + MAX_QTY_PER_ITEM + " units per item", "error");
+        return true;
+      }
       c.items[key].qty += 1;
     } else {
       c.items[key] = {
@@ -148,11 +156,12 @@ const Cart = {
     return true;
   },
 
-  /** set quantity directly; 0 removes the item */
+  /** set quantity directly; 0 removes the item; capped at MAX_QTY_PER_ITEM */
   setQty(menuItemId, qty) {
     const c = this.get();
     if (!c) return;
     const key = String(menuItemId);
+    qty = Math.min(qty, MAX_QTY_PER_ITEM);
     if (qty <= 0) delete c.items[key];
     else if (c.items[key]) c.items[key].qty = qty;
     if (Object.keys(c.items).length === 0) this.save(null);
@@ -583,7 +592,7 @@ function renderDrawer() {
     + '<div class="flex items-center gap-2">'
     + '<span class="stepper-btn" onclick="drawerQty(\'' + i._id + "'," + (i.qty - 1) + ')">−</span>'
     + '<span class="font-semibold w-5 text-center">' + i.qty + "</span>"
-    + '<span class="stepper-btn" onclick="drawerQty(\'' + i._id + "'," + (i.qty + 1) + ')">+</span>'
+    + (i.qty >= MAX_QTY_PER_ITEM ? "" : '<span class="stepper-btn" onclick="drawerQty(\'' + i._id + "'," + (i.qty + 1) + ')">+</span>')
     + "</div></div>"
   ).join("");
 
@@ -658,7 +667,7 @@ function renderFooter() {
     + "</div></div>"
     + '<div><h4 class="font-display font-semibold mb-3">Contact</h4>'
     + '<div class="space-y-2 text-muted">'
-    + "<p>📧 hello@foodhub.in</p><p>📞 1800-419-0000</p><p>📍 Dehradun & Patna, India</p>"
+    + "<p>📧 deepakmarandi2005@gmail.com</p><p>📞 1800-419-0000</p><p>📍 Dehradun & Patna, India</p>"
     + "</div></div>"
     + "</div>"
     + '<div class="max-w-7xl mx-auto px-4 pb-8">'
