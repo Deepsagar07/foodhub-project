@@ -4,10 +4,12 @@ const express = require('express');
 const router = express.Router();
 const { protect, restaurantOnly } = require('../middleware/auth');
 const { upload } = require('../middleware/upload');
+const { rateLimit } = require('../middleware/security');
 const partnerController = require('../controllers/partnerController');
 
-// PUBLIC: a restaurant owner registers their own outlet (no login needed)
-router.post('/register', partnerController.registerRestaurant);
+// PUBLIC: a restaurant owner registers their own outlet (no login needed).
+// Strictly rate-limited (5/hour per IP) so bots can't spam fake restaurants.
+router.post('/register', rateLimit({ windowMs: 60 * 60 * 1000, max: 5 }), partnerController.registerRestaurant);
 
 router.use(protect, restaurantOnly);
 

@@ -187,19 +187,27 @@ function perr(msg) {
   el.classList.remove("hidden");
 }
 
-/** authed fetch with the PARTNER token (401 -> back to login view) */
+/** authed fetch with the PARTNER token (401 -> back to login view).
+ * Falls back to the main login token: a partner who logged in via login.html
+ * is routed here by role, and the backend's restaurantOnly middleware
+ * enforces the role, so a customer token can never access partner data. */
+function pToken() {
+  return localStorage.getItem(P_TOKEN) || localStorage.getItem("fh_token");
+}
 async function pFetch(path, { method = "GET", body = null } = {}) {
   const headers = { "Content-Type": "application/json" };
-  const token = localStorage.getItem(P_TOKEN);
+  const token = pToken();
   if (token) headers["Authorization"] = "Bearer " + token;
   const res = await fetch(API_BASE + path, {
     method, headers, body: body ? JSON.stringify(body) : undefined,
   });
-  if (res.status === 401) { showLogin("Session expired — please log in again."); throw new Error("unauthorized"); }
+  if (res.status === 401 || res.status === 403) { showLogin("Session expired — please log in again."); throw new Error("unauthorized"); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Request failed");
   return data;
 }
+
+/** confirm partner login, then load panel */
 
 /** Switch between Login and Register tabs */
 function pTab(which) {
@@ -277,7 +285,7 @@ async function partnerLogin() {
 
 function partnerLogout() {
   try {
-    const t = localStorage.getItem(P_TOKEN);
+    const t = pToken();
     if (t && typeof API_BASE !== "undefined") {
       fetch(API_BASE + "/auth/logout", {
         method: "POST",
@@ -288,6 +296,9 @@ function partnerLogout() {
   } catch (e) {}
   localStorage.removeItem(P_TOKEN);
   localStorage.removeItem(P_USER);
+  // also clear the main session: the panel may have been entered with it
+  localStorage.removeItem("fh_token");
+  localStorage.removeItem("fh_user");
   if (socket) { socket.disconnect(); socket = null; }
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   showLogin("");
@@ -391,6 +402,10 @@ const emptyBox = (msg) =>
   `<div class="surface rounded-2xl p-6 text-center text-sm text-muted">${msg}</div>`;
 
 async function loadOrders(silent) {
+  // Preserve rider-dropdown selections across auto-refreshes (poll/socket),
+  // so a partner mid-selection doesn't lose their pick every 15 seconds.
+  const selCache = {};
+  document.querySelectorAll('select[id^="rider-"]').forEach(s => { selCache[s.id] = s.value; });
   try {
     const orders = await pFetch("/partner/orders");
     const by = (s) => orders.filter((o) => o.status === s);
@@ -406,6 +421,11 @@ async function loadOrders(silent) {
       hist.length ? hist.map(orderCard).join("") : emptyBox("No completed orders today yet.");
     document.getElementById("st-new").textContent = placed.length;
     document.getElementById("st-prep").textContent = prep.length;
+    // restore selections
+    Object.entries(selCache).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    });
   } catch (e) {
     if (!silent && e.message !== "unauthorized") toast("Could not refresh orders.", "error");
   }
@@ -645,7 +665,7 @@ function connectSocket() {
 
 /* ---------- boot ---------- */
 initCommon();
-if (localStorage.getItem(P_TOKEN)) enterPanel();
+if (pToken()) enterPanel();
 </script>
 </body>
 </html>

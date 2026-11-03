@@ -60,10 +60,16 @@ async function doLogin() {
   btn.disabled = true;
   btn.textContent = "Logging in…";
   try {
-    await login(email, password);
+    const user = await login(email, password);
     toast("Welcome back! 👋", "success");
-    // return to the page that required login (?next=), else home
-    location.href = getParam("next") || "index.html";
+    // ?next= wins; otherwise route by role so partners, admins and riders
+    // land on their own dashboards instead of the customer homepage.
+    const next = getParam("next");
+    if (next) location.href = next;
+    else if (user.role === "admin") location.href = "admin.html";
+    else if (user.role === "restaurant") location.href = "partner.html";
+    else if (user.role === "delivery") location.href = "rider.html";
+    else location.href = "index.html";
   } catch (e) {
     err.textContent = e.message;
     err.classList.remove("hidden");

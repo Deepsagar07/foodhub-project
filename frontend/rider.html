@@ -80,14 +80,20 @@ function derr(msg) {
 }
 
 /** authed fetch with the RIDER token (401 -> back to login view) */
+/** Rider session token: dedicated rider token, falling back to the main login
+ * token (a rider who logged in via login.html is routed here by role; the
+ * backend's riderOnly middleware enforces the role). */
+function rToken() {
+  return localStorage.getItem(R_TOKEN) || localStorage.getItem("fh_token");
+}
 async function rFetch(path, { method = "GET", body = null } = {}) {
   const headers = { "Content-Type": "application/json" };
-  const token = localStorage.getItem(R_TOKEN);
+  const token = rToken();
   if (token) headers["Authorization"] = "Bearer " + token;
   const res = await fetch(API_BASE + path, {
     method, headers, body: body ? JSON.stringify(body) : undefined,
   });
-  if (res.status === 401) { showLogin("Session expired — please log in again."); throw new Error("unauthorized"); }
+  if (res.status === 401 || res.status === 403) { showLogin("Session expired — please log in again."); throw new Error("unauthorized"); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Request failed");
   return data;
@@ -118,7 +124,7 @@ async function riderLogin() {
 
 function riderLogout() {
   try {
-    const t = localStorage.getItem(R_TOKEN);
+    const t = rToken();
     if (t && typeof API_BASE !== "undefined") {
       fetch(API_BASE + "/auth/logout", {
         method: "POST",
@@ -129,6 +135,9 @@ function riderLogout() {
   } catch (e) {}
   localStorage.removeItem(R_TOKEN);
   localStorage.removeItem(R_USER);
+  // also clear the main session: the panel may have been entered with it
+  localStorage.removeItem("fh_token");
+  localStorage.removeItem("fh_user");
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   showLogin("");
 }
@@ -214,7 +223,9 @@ async function markDelivered(id) {
   }
 }
 
-if (localStorage.getItem(R_TOKEN)) enterPanel();
+if (rToken()) enterPanel();
+
+initCommon();
 </script>
 </body>
 </html>
