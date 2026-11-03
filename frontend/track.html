@@ -43,7 +43,7 @@ const STEPS = [
   { key: "placed",     label: "Order placed",  icon: "🧾" },
   { key: "preparing",  label: "Preparing",     icon: "👨‍🍳" },
   { key: "on_the_way", label: "On the way",    icon: "🛵" },
-  { key: "delivered",  label: "Delivered",     icon: "✅" },
+  { key: "delivered",  label: "Delivered",     icon: "📦" },
 ];
 
 /** "On the way" / "on-the-way" / "On The Way" -> "on_the_way" */
@@ -89,10 +89,15 @@ function render(o) {
   const timeline = STEPS.map((s, i) => {
     const cls = i < currentIdx ? "done" : (i === currentIdx ? "active" : "");
     const ts = history[s.key] || (s.key === "placed" ? o.createdAt : null);
+    let sub;
+    if (ts) sub = fmtTime(ts);
+    else if (i < currentIdx) sub = ""; // done but no timestamp recorded — show nothing, NOT "Pending"
+    else if (i === currentIdx) sub = (s.key === "delivered" ? "Completed 🎉" : "In progress…");
+    else sub = "Pending";
     return `<div class="timeline-step ${cls}">
       <div class="timeline-dot">${i < currentIdx ? "✓" : s.icon}</div>
       <p class="font-semibold">${s.label}</p>
-      <p class="text-xs text-muted">${ts ? fmtTime(ts) : (i === currentIdx ? (s.key === "delivered" ? "Completed 🎉" : "In progress…") : "Pending")}</p>
+      <p class="text-xs text-muted">${sub}</p>
     </div>`;
   }).join("");
 
