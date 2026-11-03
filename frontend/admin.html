@@ -241,7 +241,7 @@ async function loadRestaurants() {
   try {
     const list = await apiFetch("/admin/restaurants", { auth: true });
     tb.innerHTML = list.length ? list.map(r => {
-      const id = JSON.stringify(String(r._id));
+      const id = String(r._id);
       const st = r.status || "active";
       const badge = st === "pending"
         ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#fef3c7;color:#92400e">⏳ PENDING</span>`
@@ -255,17 +255,17 @@ async function loadRestaurants() {
       // Admin decides who stays: pending -> approve/reject; live -> suspend/delete; suspended -> reactivate/delete
       const actions = st === "pending"
         ? `<div class="flex gap-2 whitespace-nowrap">
-             <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-green-600 hover:bg-green-700" onclick="approveRest(${id})">✓ Approve</button>
-             <button class="text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="rejectRest(${id})">✕ Reject</button>
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-green-600 hover:bg-green-700" onclick="approveRest('${id}')">✓ Approve</button>
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="rejectRest('${id}')">✕ Reject</button>
            </div>`
         : st === "suspended"
         ? `<div class="flex gap-2 whitespace-nowrap">
-             <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-green-600 hover:bg-green-700" onclick="approveRest(${id})">▶ Reactivate</button>
-             <button class="text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="rejectRest(${id})">🗑 Delete</button>
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-green-600 hover:bg-green-700" onclick="approveRest('${id}')">▶ Reactivate</button>
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="rejectRest('${id}')">🗑 Delete</button>
            </div>`
         : `<div class="flex gap-2 whitespace-nowrap">
-             <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white hover:opacity-90" style="background:#f59e0b" onclick="suspendRest(${id})">⏸ Suspend</button>
-             <button class="text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="rejectRest(${id})">🗑 Delete</button>
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white hover:opacity-90" style="background:#f59e0b" onclick="suspendRest('${id}')">⏸ Suspend</button>
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="rejectRest('${id}')">🗑 Delete</button>
            </div>`;
       return `<tr class="border-b" style="border-color:var(--border)">
         <td class="py-2 pr-3"><span class="font-medium">${esc(r.name)}</span><br><span class="text-xs text-muted">${esc(r.area || "")}, ${esc(r.city || "")} · ${esc(r.cuisine || "")}</span></td>
