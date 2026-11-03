@@ -39,7 +39,7 @@
       <!-- LOGIN -->
       <div id="pane-login" class="space-y-3">
         <input id="p-email" type="email" class="input" placeholder="Partner email" autocomplete="email">
-        <input id="p-password" type="password" class="input" placeholder="Password" autocomplete="current-password">
+        <div class="relative"><input id="p-password" type="password" class="input pr-11" placeholder="Password" autocomplete="current-password"><button type="button" onclick="togglePw('p-password', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
         <p id="p-err" class="text-sm hidden" style="color:var(--danger)"></p>
         <button class="btn-brand w-full" onclick="partnerLogin()">Login as Partner</button>
         <p class="text-xs text-muted text-center mt-4">
@@ -65,7 +65,7 @@
           <input id="rg-phone" class="input" placeholder="Mobile (optional)" inputmode="numeric" maxlength="10">
           <input id="rg-email" type="email" class="input" placeholder="Email *">
         </div>
-        <input id="rg-pass" type="password" class="input" placeholder="Password (min 6 chars) *">
+        <div class="relative"><input id="rg-pass" type="password" class="input pr-11" placeholder="Password (min 6 chars) *"><button type="button" onclick="togglePw('rg-pass', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
         <p id="rg-err" class="text-sm hidden" style="color:var(--danger)"></p>
         <button class="btn-brand w-full" onclick="partnerRegister()">Register My Restaurant</button>
         <p class="text-xs text-muted text-center">Your restaurant goes live after a quick admin approval. You can add your menu right away!</p>
@@ -116,7 +116,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
         <input id="r-name" class="input" placeholder="Name *">
         <input id="r-phone" class="input" placeholder="10-digit mobile *" inputmode="numeric" maxlength="10">
-        <input id="r-pass" type="password" class="input" placeholder="Password *">
+        <div class="relative"><input id="r-pass" type="password" class="input pr-11" placeholder="Password *"><button type="button" onclick="togglePw('r-pass', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
         <button class="btn-brand" onclick="addRider()">+ Add</button>
       </div>
       <p class="text-xs text-muted mt-2">Riders log in at <span class="font-medium">rider.html</span> with their mobile number + password.</p>
@@ -322,7 +322,16 @@ async function enterPanel() {
     document.getElementById("st-today").textContent = me.counts.today;
     document.getElementById("login-view").classList.add("hidden");
     document.getElementById("panel-view").classList.remove("hidden");
-    document.getElementById("pending-banner").classList.toggle("hidden", me.restaurant.status !== "pending");
+    const _st = me.restaurant.status || "active";
+    const _banner = document.getElementById("pending-banner");
+    if (_st === "suspended") {
+      _banner.style.background = "#fee2e2";
+      _banner.style.color = "#991b1b";
+      _banner.innerHTML = "⛔ Your restaurant has been <b>suspended by the admin</b> — it's hidden from customers right now. Please contact support.";
+      _banner.classList.remove("hidden");
+    } else {
+      _banner.classList.toggle("hidden", _st !== "pending");
+    }
     loadMenu();
     await loadRiders();
     await loadOrders();

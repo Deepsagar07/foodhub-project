@@ -34,7 +34,7 @@ const createOrder = asyncHandler(async (req, res) => {
   }
 
   const restaurant = await Restaurant.findById(restaurantId);
-  if (!restaurant || restaurant.status === 'pending') {
+  if (!restaurant || ['pending', 'suspended'].includes(restaurant.status)) {
     return res.status(404).json({ message: 'Restaurant not found' });
   }
 

@@ -73,10 +73,33 @@ const login = asyncHandler(async (req, res) => {
     return res.status(401).json({ message: 'Invalid email/phone or password' });
   }
 
+  // Brute-force protection: 3 wrong passwords lock the account for 24 hours
+  if (user.lockUntil && user.lockUntil > new Date()) {
+    const msLeft = user.lockUntil.getTime() - Date.now();
+    const hrs = Math.floor(msLeft / 3600000);
+    const mins = Math.ceil((msLeft % 3600000) / 60000);
+    const when = hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`;
+    return res.status(423).json({ message: `Account locked due to too many failed attempts. Try again in ${when}.` });
+  }
+
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) {
-    return res.status(401).json({ message: 'Invalid email/phone or password' });
+    user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+    if (user.failedLoginAttempts >= 3) {
+      user.lockUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await user.save();
+      return res.status(423).json({ message: 'Too many failed attempts. Your account is locked for 24 hours.' });
+    }
+    await user.save();
+    const left = 3 - user.failedLoginAttempts;
+    return res.status(401).json({
+      message: `Invalid email/phone or password. ${left} attempt${left === 1 ? '' : 's'} left before your account is locked for 24 hours.`,
+    });
   }
+
+  // Success: reset the failed-attempt counter
+  user.failedLoginAttempts = 0;
+  user.lockUntil = null;
 
   // Stamp login analytics (visible in the admin dashboard)
   user.lastLogin = new Date();

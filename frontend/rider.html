@@ -33,7 +33,7 @@
       </div>
       <div class="space-y-3">
         <input id="d-phone" class="input" placeholder="10-digit mobile number" inputmode="numeric" maxlength="10" autocomplete="tel">
-        <input id="d-password" type="password" class="input" placeholder="Password" autocomplete="current-password">
+        <div class="relative"><input id="d-password" type="password" class="input pr-11" placeholder="Password" autocomplete="current-password"><button type="button" onclick="togglePw('d-password', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
         <p id="d-err" class="text-sm hidden" style="color:var(--danger)"></p>
         <button class="btn-brand w-full" onclick="riderLogin()">Login as Rider</button>
       </div>

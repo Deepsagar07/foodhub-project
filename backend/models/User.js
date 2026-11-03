@@ -35,6 +35,9 @@ const userSchema = new mongoose.Schema(
     lastLoginIp: { type: String, default: '' },
     // IP address the account was created from (first join)
     signupIp: { type: String, default: '' },
+    // Brute-force protection: 3 wrong passwords -> locked for 24 hours
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date, default: null },
     addresses: { type: [addressSchema], default: [] },
   },
   { timestamps: true }

@@ -17,12 +17,17 @@ async function signup(name, email, password) {
   return data.user;
 }
 
-/** Log in, save token + user, return the user object. */
+/** Log in, save token + user, return the user object.
+ * Uses raw fetch (not apiFetch): a 401/423 here means "bad credentials /
+ * locked", NOT an expired session, so it must not trigger the logout redirect. */
 async function login(email, password) {
-  const data = await apiFetch("/auth/login", {
+  const res = await fetch(API_BASE + "/auth/login", {
     method: "POST",
-    body: { email, password },
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
   });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Login failed");
   localStorage.setItem("fh_token", data.token);
   localStorage.setItem("fh_user", JSON.stringify(data.user));
   return data.user;

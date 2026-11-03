@@ -242,20 +242,31 @@ async function loadRestaurants() {
     const list = await apiFetch("/admin/restaurants", { auth: true });
     tb.innerHTML = list.length ? list.map(r => {
       const id = JSON.stringify(String(r._id));
-      const pending = r.status === "pending";
-      const badge = pending
+      const st = r.status || "active";
+      const badge = st === "pending"
         ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#fef3c7;color:#92400e">⏳ PENDING</span>`
-        : `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#dcfce7;color:#166534">LIVE</span>`;
+        : st === "suspended"
+        ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#fee2e2;color:#991b1b">⛔ SUSPENDED</span>`
+        : `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#dcfce7;color:#166534">● LIVE</span>`;
       const partner = r.partner
         ? `${esc(r.partner.name)}<br><span class="text-xs text-muted">${esc(r.partner.email)}</span>`
         : `<span class="text-muted">—</span>`;
       const joined = r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
-      const actions = pending
+      // Admin decides who stays: pending -> approve/reject; live -> suspend/delete; suspended -> reactivate/delete
+      const actions = st === "pending"
         ? `<div class="flex gap-2 whitespace-nowrap">
              <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-green-600 hover:bg-green-700" onclick="approveRest(${id})">✓ Approve</button>
              <button class="text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="rejectRest(${id})">✕ Reject</button>
            </div>`
-        : `<span class="text-xs text-muted">—</span>`;
+        : st === "suspended"
+        ? `<div class="flex gap-2 whitespace-nowrap">
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-green-600 hover:bg-green-700" onclick="approveRest(${id})">▶ Reactivate</button>
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="rejectRest(${id})">🗑 Delete</button>
+           </div>`
+        : `<div class="flex gap-2 whitespace-nowrap">
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white hover:opacity-90" style="background:#f59e0b" onclick="suspendRest(${id})">⏸ Suspend</button>
+             <button class="text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="rejectRest(${id})">🗑 Delete</button>
+           </div>`;
       return `<tr class="border-b" style="border-color:var(--border)">
         <td class="py-2 pr-3"><span class="font-medium">${esc(r.name)}</span><br><span class="text-xs text-muted">${esc(r.area || "")}, ${esc(r.city || "")} · ${esc(r.cuisine || "")}</span></td>
         <td class="py-2 pr-3">${badge}</td>
@@ -288,6 +299,29 @@ async function rejectRest(id) {
     await apiFetch("/admin/restaurants/" + id, { method: "DELETE", auth: true });
     toast("Restaurant rejected and removed.", "success");
     loadRestaurants();
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+async function suspendRest(id) {
+  if (!confirm("Suspend this restaurant? It will be hidden from customers immediately (you can reactivate it anytime).")) return;
+  try {
+    await apiFetch("/admin/restaurants/" + id + "/suspend", { method: "PATCH", auth: true });
+    toast("Restaurant suspended.", "success");
+    loadRestaurants();
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+/** Clear a user's 24-hour login lockout. */
+async function unlockUser(id) {
+  if (!confirm("Unlock this account's login?")) return;
+  try {
+    await apiFetch("/admin/users/" + id + "/unlock", { method: "PATCH", auth: true });
+    toast("Account unlocked. ✅", "success");
+    loadAnalytics();
   } catch (e) {
     toast(e.message, "error");
   }
@@ -501,8 +535,14 @@ async function loadAnalytics() {
     const loginIp = u.lastLoginIp ? `<br><span class="text-xs font-mono text-muted">${esc(u.lastLoginIp)}</span>` : "";
     const device = latest && latest.device ? esc(latest.device) : `<span class="text-muted">—</span>`;
     const lastLogin = u.lastLogin ? fmtDT(u.lastLogin) : `<span class="text-muted">never</span>`;
+    // 24h lockout badge + unlock button
+    const locked = u.lockUntil && new Date(u.lockUntil) > new Date();
+    const lockBadge = locked
+      ? `<br><span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#fee2e2;color:#991b1b">🔒 Locked</span>
+         <button onclick="unlockUser('${id}')" class="text-xs font-bold px-2 py-0.5 rounded-full ml-1 hover:opacity-80" style="background:#dcfce7;color:#166534">🔓 Unlock</button>`
+      : "";
     return `<tr class="border-b" style="border-color:var(--border)">
-      <td class="py-2 pr-3">${esc(u.name || "—")}<br><span class="text-xs text-muted">${esc(u.email || "")}</span>${rest}</td>
+      <td class="py-2 pr-3">${esc(u.name || "—")}<br><span class="text-xs text-muted">${esc(u.email || "")}</span>${rest}${lockBadge}</td>
       <td class="py-2 pr-3 whitespace-nowrap">${fmtDate(u.createdAt)}${joinIp}</td>
       <td class="py-2 pr-3">${device}</td>
       <td class="py-2 pr-3 whitespace-nowrap">${lastLogin}${loginIp}</td>

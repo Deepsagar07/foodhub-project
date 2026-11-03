@@ -6,8 +6,8 @@ const asyncHandler = require('../middleware/asyncHandler');
 // GET /api/restaurants?search=&cuisine=  -> list of restaurants
 const listRestaurants = asyncHandler(async (req, res) => {
   const { search, cuisine } = req.query;
-  // Pending (unapproved) restaurants stay hidden from customers
-  const filter = { status: { $ne: 'pending' } };
+  // Pending (unapproved) and suspended restaurants stay hidden from customers
+  const filter = { status: { $nin: ['pending', 'suspended'] } };
 
   if (search) {
     // match against name or cuisine, case-insensitive
@@ -25,7 +25,7 @@ const listRestaurants = asyncHandler(async (req, res) => {
 // GET /api/restaurants/:id  -> restaurant with its menu embedded
 const getRestaurant = asyncHandler(async (req, res) => {
   const restaurant = await Restaurant.findById(req.params.id);
-  if (!restaurant || restaurant.status === 'pending') {
+  if (!restaurant || ['pending', 'suspended'].includes(restaurant.status)) {
     return res.status(404).json({ message: 'Restaurant not found' });
   }
   const menu = await MenuItem.find({ restaurant: restaurant._id, isAvailable: true }).sort({ category: 1 });

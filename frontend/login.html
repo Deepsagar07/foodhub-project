@@ -30,7 +30,7 @@
     </div>
     <div class="space-y-3">
       <input id="email" type="email" class="input" placeholder="Email address" autocomplete="email">
-      <input id="password" type="password" class="input" placeholder="Password" autocomplete="current-password">
+      <div class="relative"><input id="password" type="password" class="input pr-11" placeholder="Password" autocomplete="current-password"><button type="button" onclick="togglePw('password', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
       <p id="err" class="text-sm hidden" style="color:var(--danger)"></p>
       <button id="btn" class="btn-brand w-full" onclick="doLogin()">Login</button>
     </div>

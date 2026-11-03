@@ -5,6 +5,7 @@
 const Order = require('../models/Order');
 const Restaurant = require('../models/Restaurant');
 const MenuItem = require('../models/MenuItem');
+const User = require('../models/User');
 const asyncHandler = require('../middleware/asyncHandler');
 const { fileUrl } = require('../middleware/upload');
 

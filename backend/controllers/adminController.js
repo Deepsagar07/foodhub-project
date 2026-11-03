@@ -164,13 +164,33 @@ const getRestaurants = asyncHandler(async (req, res) => {
   res.json(out);
 });
 
-// PATCH /api/admin/restaurants/:id/approve (admin) -> make a pending restaurant live
+// PATCH /api/admin/restaurants/:id/approve (admin) -> make a pending/suspended restaurant live
 const approveRestaurant = asyncHandler(async (req, res) => {
   const r = await Restaurant.findById(req.params.id);
   if (!r) return res.status(404).json({ message: 'Restaurant not found' });
   r.status = 'active';
   await r.save();
   res.json(r);
+});
+
+// PATCH /api/admin/restaurants/:id/suspend (admin) -> hide a live restaurant
+// from customers without deleting anything (recoverable via approve)
+const suspendRestaurant = asyncHandler(async (req, res) => {
+  const r = await Restaurant.findById(req.params.id);
+  if (!r) return res.status(404).json({ message: 'Restaurant not found' });
+  r.status = 'suspended';
+  await r.save();
+  res.json(r);
+});
+
+// PATCH /api/admin/users/:id/unlock (admin) -> clear a 24h login lockout
+const unlockUser = asyncHandler(async (req, res) => {
+  const u = await User.findById(req.params.id);
+  if (!u) return res.status(404).json({ message: 'User not found' });
+  u.failedLoginAttempts = 0;
+  u.lockUntil = null;
+  await u.save();
+  res.json({ ok: true });
 });
 
 // DELETE /api/admin/restaurants/:id (admin) -> reject & remove a pending restaurant
@@ -185,4 +205,4 @@ const rejectRestaurant = asyncHandler(async (req, res) => {
   res.json({ message: 'Restaurant rejected and removed' });
 });
 
-module.exports = { getStats, getAllOrders, createMenuItem, updateMenuItem, deleteMenuItem, getVisits, getUsers, getRestaurants, approveRestaurant, rejectRestaurant };
+module.exports = { getStats, getAllOrders, createMenuItem, updateMenuItem, deleteMenuItem, getVisits, getUsers, getRestaurants, approveRestaurant, suspendRestaurant, rejectRestaurant, unlockUser };

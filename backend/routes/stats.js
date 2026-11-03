@@ -12,7 +12,7 @@ router.get(
   '/',
   asyncHandler(async (req, res) => {
     const [restaurants, dishes, ratingAgg] = await Promise.all([
-      Restaurant.countDocuments({ status: { $ne: 'pending' } }), // only live restaurants
+      Restaurant.countDocuments({ status: { $nin: ['pending', 'suspended'] } }), // only live restaurants
       MenuItem.countDocuments({ isAvailable: true }),
       Restaurant.aggregate([
         { $group: { _id: null, avg: { $avg: '$rating' } } },
