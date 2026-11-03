@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Rider Panel</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-3xl mx-auto px-4 py-8">
+
+  <!-- ============ LOGIN VIEW ============ -->
+  <div id="login-view" class="max-w-md mx-auto">
+    <div class="surface rounded-2xl p-8" style="box-shadow:var(--shadow)">
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white mb-3" style="background:var(--brand)">🛵</div>
+        <h1 class="font-display font-bold text-2xl">Rider Login</h1>
+        <p class="text-sm text-muted mt-1">Your restaurant's delivery panel.</p>
+      </div>
+      <div class="space-y-3">
+        <input id="d-phone" class="input" placeholder="10-digit mobile number" inputmode="numeric" maxlength="10" autocomplete="tel">
+        <input id="d-password" type="password" class="input" placeholder="Password" autocomplete="current-password">
+        <p id="d-err" class="text-sm hidden" style="color:var(--danger)"></p>
+        <button class="btn-brand w-full" onclick="riderLogin()">Login as Rider</button>
+      </div>
+      <p class="text-xs text-muted text-center mt-5">
+        Your restaurant partner gives you this login.<br>Use the mobile number they registered for you.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ PANEL VIEW ============ -->
+  <div id="panel-view" class="hidden">
+    <div class="surface rounded-2xl p-5 mb-5 flex items-center justify-between flex-wrap gap-3" style="box-shadow:var(--shadow)">
+      <div>
+        <h1 id="rider-name" class="font-display font-bold text-xl">—</h1>
+        <p id="rider-sub" class="text-sm text-muted">—</p>
+      </div>
+      <button class="text-sm font-semibold px-3 py-1.5 rounded-xl surface hover:opacity-70" onclick="riderLogout()">Logout</button>
+    </div>
+
+    <h2 class="font-display font-bold text-lg mb-3">🛵 My Deliveries <span class="text-xs font-medium text-muted">(pick up & deliver)</span></h2>
+    <div id="sec-active" class="space-y-3 mb-8"></div>
+
+    <h2 class="font-display font-bold text-lg mb-3">📋 Delivered</h2>
+    <div id="sec-done" class="space-y-3 mb-8"></div>
+  </div>
+
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/common.js"></script>
+<script>
+/* ============================================================
+   FoodHub Rider Panel — delivery boys log in with their
+   10-digit mobile number (fh_rider_token, separate session).
+   ============================================================ */
+const R_TOKEN = "fh_rider_token";
+const R_USER = "fh_rider";
+let pollTimer = null;
+
+function derr(msg) {
+  const el = document.getElementById("d-err");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+/** authed fetch with the RIDER token (401 -> back to login view) */
+async function rFetch(path, { method = "GET", body = null } = {}) {
+  const headers = { "Content-Type": "application/json" };
+  const token = localStorage.getItem(R_TOKEN);
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch(API_BASE + path, {
+    method, headers, body: body ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) { showLogin("Session expired — please log in again."); throw new Error("unauthorized"); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Request failed");
+  return data;
+}
+
+async function riderLogin() {
+  const phone = document.getElementById("d-phone").value.trim();
+  const password = document.getElementById("d-password").value;
+  if (!phone || !password) return derr("Enter your mobile number and password.");
+  try {
+    const res = await fetch(API_BASE + "/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return derr(data.message || "Login failed.");
+    if (data.user.role !== "delivery") {
+      return derr("This login is for delivery riders only.");
+    }
+    localStorage.setItem(R_TOKEN, data.token);
+    localStorage.setItem(R_USER, JSON.stringify(data.user));
+    enterPanel(data.user);
+  } catch (e) {
+    derr("Could not reach the server. Is the backend running?");
+  }
+}
+
+function riderLogout() {
+  try {
+    const t = localStorage.getItem(R_TOKEN);
+    if (t && typeof API_BASE !== "undefined") {
+      fetch(API_BASE + "/auth/logout", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + t },
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch (e) {}
+  localStorage.removeItem(R_TOKEN);
+  localStorage.removeItem(R_USER);
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  showLogin("");
+}
+
+function showLogin(msg) {
+  document.getElementById("login-view").classList.remove("hidden");
+  document.getElementById("panel-view").classList.add("hidden");
+  if (msg) derr(msg);
+}
+
+async function enterPanel(user) {
+  user = user || JSON.parse(localStorage.getItem(R_USER) || "null");
+  if (!user) return showLogin("");
+  try {
+    const me = await rFetch("/rider/me");
+    document.getElementById("rider-name").textContent = "👋 " + user.name;
+    document.getElementById("rider-sub").textContent =
+      (me.restaurant ? me.restaurant.name + ", " + (me.restaurant.area || "") : "Delivery rider");
+    document.getElementById("login-view").classList.add("hidden");
+    document.getElementById("panel-view").classList.remove("hidden");
+    await loadDeliveries();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => loadDeliveries(true), 15000);
+  } catch (e) {
+    if (e.message !== "unauthorized") derr("Could not load your deliveries.");
+  }
+}
+
+function timeAgo(iso) {
+  const s = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + "m ago";
+  return Math.floor(s / 3600) + "h ago";
+}
+
+function deliveryCard(o) {
+  const idShort = String(o._id).slice(-6).toUpperCase();
+  const when = timeAgo(o.createdAt);
+  const cust = (o.user && o.user.name) || "Customer";
+  const custPhone = (o.user && o.user.phone) ? ` <span class="text-xs text-muted font-mono">📞 ${esc(o.user.phone)}</span>` : "";
+  const items = (o.items || []).map(i => `${i.qty}× ${i.name}`).join(", ");
+  const action = o.status === "on_the_way"
+    ? `<button onclick="markDelivered('${o._id}')" class="w-full mt-3 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700">✅ Mark Delivered</button>`
+    : `<span class="inline-block mt-3 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">DELIVERED</span>`;
+  return `<div class="surface rounded-2xl p-4" style="box-shadow:var(--shadow)">
+    <div class="flex items-center justify-between mb-1">
+      <p class="font-bold">#${idShort} <span class="text-xs font-medium text-muted">· ${when}</span></p>
+      <p class="font-bold" style="color:var(--brand-dark)">${inr(o.total)}</p>
+    </div>
+    <p class="text-sm font-medium">👤 ${esc(cust)}${custPhone}</p>
+    <p class="text-sm text-muted mt-1">📍 ${esc(o.address || "")}</p>
+    <p class="text-sm text-muted mt-1">${esc(items)}</p>
+    <p class="text-xs text-muted mt-1">💵 ${o.paymentMethod === "cod" ? "Collect cash on delivery" : esc(o.paymentMethod)}</p>
+    ${action}
+  </div>`;
+}
+
+const emptyBox = (msg) =>
+  `<div class="surface rounded-2xl p-6 text-center text-sm text-muted">${msg}</div>`;
+
+async function loadDeliveries(silent) {
+  try {
+    const orders = await rFetch("/rider/orders");
+    const active = orders.filter(o => o.status === "on_the_way");
+    const done = orders.filter(o => o.status === "delivered").slice(0, 20);
+    document.getElementById("sec-active").innerHTML =
+      active.length ? active.map(deliveryCard).join("") : emptyBox("No deliveries right now — relax! 🛵");
+    document.getElementById("sec-done").innerHTML =
+      done.length ? done.map(deliveryCard).join("") : emptyBox("Nothing delivered yet.");
+  } catch (e) {
+    if (!silent && e.message !== "unauthorized") toast("Could not refresh deliveries.", "error");
+  }
+}
+
+async function markDelivered(id) {
+  if (!confirm("Mark this order as delivered?")) return;
+  try {
+    await rFetch("/rider/orders/" + id + "/delivered", { method: "PATCH" });
+    toast("Delivered! 🎉", "success");
+    loadDeliveries();
+  } catch (e) {
+    if (e.message !== "unauthorized") toast(e.message, "error");
+  }
+}
+
+if (localStorage.getItem(R_TOKEN)) enterPanel();
+</script>
+</body>
+</html>

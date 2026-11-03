@@ -23,9 +23,12 @@ const userSchema = new mongoose.Schema(
     },
     // We store only the bcrypt hash, never the plain password
     passwordHash: { type: String, required: true },
-    role: { type: String, enum: ['user', 'admin', 'restaurant'], default: 'user' },
-    // For role='restaurant': the outlet this partner account manages
+    role: { type: String, enum: ['user', 'admin', 'restaurant', 'delivery'], default: 'user' },
+    // For role='restaurant': the outlet this partner account manages.
+    // For role='delivery': the outlet this rider delivers for.
     restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', default: null },
+    // Phone doubles as the login ID for delivery riders (10-digit Indian mobile)
+    phone: { type: String, default: '', trim: true },
     // Login analytics (visible in the admin dashboard)
     lastLogin: { type: Date, default: null },
     loginCount: { type: Number, default: 0 },

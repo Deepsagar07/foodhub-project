@@ -15,6 +15,7 @@ const couponSchema = new mongoose.Schema(
     minOrder: { type: Number, default: 0, min: 0 }, // minimum subtotal to use the coupon
     freeDelivery: { type: Boolean, default: false }, // e.g. FREEDEL waives the delivery fee
     isActive: { type: Boolean, default: true }, // admin can disable a coupon
+    maxUsesPerUser: { type: Number, default: 1, min: 1 }, // how many times one account can use this code
   },
   { timestamps: true }
 );

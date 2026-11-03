@@ -13,6 +13,10 @@ const restaurantSchema = new mongoose.Schema(
     address: { type: String, default: '' },
     city: { type: String, default: 'Dehradun', trim: true, index: true }, // service city: Dehradun | Patna
     area: { type: String, default: '', trim: true }, // locality the outlet serves, e.g. "Rajpur Road"
+    // Self-registered restaurants start as 'pending' (hidden from customers)
+    // until an admin approves them. Older restaurants have no status field
+    // and are treated as active by queries using { status: { $ne: 'pending' } }.
+    status: { type: String, enum: ['pending', 'active'], default: 'active', index: true },
   },
   { timestamps: true }
 );

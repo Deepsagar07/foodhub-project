@@ -34,7 +34,7 @@ const createOrder = asyncHandler(async (req, res) => {
   }
 
   const restaurant = await Restaurant.findById(restaurantId);
-  if (!restaurant) {
+  if (!restaurant || restaurant.status === 'pending') {
     return res.status(404).json({ message: 'Restaurant not found' });
   }
 
@@ -71,6 +71,17 @@ const createOrder = asyncHandler(async (req, res) => {
     if (!result.valid) {
       return res.status(400).json({ message: result.message });
     }
+    // One account cannot reuse a coupon beyond its per-user limit
+    // (cancelled orders don't count — the coupon is refunded on cancel)
+    const uses = await Order.countDocuments({
+      user: req.user.id,
+      couponCode: coupon.code,
+      status: { $ne: 'cancelled' },
+    });
+    const maxUses = coupon.maxUsesPerUser || 1;
+    if (uses >= maxUses) {
+      return res.status(400).json({ message: `Coupon ${coupon.code} can only be used ${maxUses} time(s) per account` });
+    }
     discount = result.discount;
     if (result.freeDelivery) deliveryFee = 0;
   }
@@ -87,6 +98,7 @@ const createOrder = asyncHandler(async (req, res) => {
     total,
     address: String(address).trim(),
     paymentMethod: paymentMethod || 'cod',
+    couponCode: couponCode ? String(couponCode).toUpperCase().trim() : '',
   });
 
   // Notify the restaurant's partner panel in real time (it beeps on 'new-order').
@@ -115,7 +127,9 @@ const getMyOrders = asyncHandler(async (req, res) => {
 
 // GET /api/orders/:id (protect) -> one order, only for its owner or an admin
 const getOrderById = asyncHandler(async (req, res) => {
-  const order = await Order.findById(req.params.id).populate('restaurant', 'name image');
+  const order = await Order.findById(req.params.id)
+    .populate('restaurant', 'name image')
+    .populate('assignedRider', 'name phone');
   if (!order) return res.status(404).json({ message: 'Order not found' });
 
   const isOwner = String(order.user) === String(req.user.id);
@@ -141,4 +155,26 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   res.json(order);
 });
 
-module.exports = { createOrder, getMyOrders, getOrderById, updateOrderStatus };
+// PATCH /api/orders/:id/cancel (protect) -> the customer cancels their own
+// order, but only while it is still 'placed' (restaurant hasn't accepted yet)
+const cancelOrder = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  if (!order) return res.status(404).json({ message: 'Order not found' });
+  if (String(order.user) !== String(req.user.id)) {
+    return res.status(403).json({ message: 'Forbidden: this order belongs to someone else' });
+  }
+  if (order.status !== 'placed') {
+    return res.status(400).json({ message: 'Only new orders can be cancelled — the restaurant is already preparing it' });
+  }
+  order.status = 'cancelled';
+  await order.save();
+  // Notify the partner panel + the customer's tracker in real time
+  const io = req.app.get('io');
+  if (io) {
+    io.to('order:' + order._id).emit('order-status', { orderId: String(order._id), status: order.status });
+    io.to('restaurant:' + order.restaurant).emit('order-status', { orderId: String(order._id), status: order.status });
+  }
+  res.json(order);
+});
+
+module.exports = { createOrder, getMyOrders, getOrderById, updateOrderStatus, cancelOrder };

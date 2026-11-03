@@ -102,6 +102,15 @@ function render(o) {
 
   const restName = o.restaurantName || (o.restaurant && o.restaurant.name) || "";
 
+  const riderBox = o.assignedRider ? `
+    <div class="surface rounded-2xl p-4 mb-5 flex items-center gap-3" style="box-shadow:var(--shadow)">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0" style="background:#ffedd5">🛵</div>
+      <div>
+        <p class="font-semibold text-sm">Your delivery partner: ${esc(o.assignedRider.name)}</p>
+        <p class="text-xs text-muted font-mono">📞 ${esc(o.assignedRider.phone || "")}</p>
+      </div>
+    </div>` : "";
+
   wrap.innerHTML = `
     <div class="surface rounded-2xl p-6 mb-5" style="box-shadow:var(--shadow)">
       <div class="flex items-center justify-between mb-5">
@@ -111,6 +120,7 @@ function render(o) {
       </div>
       ${timeline}
     </div>
+    ${riderBox}
     <div class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
       <h3 class="font-display font-semibold mb-3">Items</h3>
       <div class="space-y-2">${items || '<p class="text-sm text-muted">No item details.</p>'}</div>
@@ -134,17 +144,11 @@ function formatAddress(a) {
 async function cancelOrder() {
   if (!confirm("Cancel this order?")) return;
   try {
-    await apiFetch("/orders/" + OID + "/status", {
-      method: "PATCH", auth: true, body: { status: "cancelled" },
-    });
+    await apiFetch("/orders/" + OID + "/cancel", { method: "PATCH", auth: true });
     toast("Order cancelled.", "success");
     load();
   } catch (e) {
-    if (/forbidden|admin/i.test(e.message)) {
-      toast("Only the restaurant can cancel orders — please contact support.", "error");
-    } else {
-      toast(e.message, "error");
-    }
+    toast(e.message, "error");
   }
 }
 

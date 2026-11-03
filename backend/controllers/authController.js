@@ -55,22 +55,27 @@ const register = asyncHandler(async (req, res) => {
   res.status(201).json({ token: signToken(user), user: safeUser(user) });
 });
 
-// POST /api/auth/login  { email, password } -> 200 { token, user }
+// POST /api/auth/login  { email|phone, password } -> 200 { token, user }
+// Delivery riders log in with their 10-digit phone number; everyone else with email.
 const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, phone, password } = req.body;
+  const idInput = String(phone || email || '').trim();
 
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required' });
+  if (!idInput || !password) {
+    return res.status(400).json({ message: 'Email/phone and password are required' });
   }
 
-  const user = await User.findOne({ email: email.toLowerCase().trim() });
+  const isPhone = /^[6-9]\d{9}$/.test(idInput);
+  const user = isPhone
+    ? await User.findOne({ phone: idInput })
+    : await User.findOne({ email: idInput.toLowerCase() });
   if (!user) {
-    return res.status(401).json({ message: 'Invalid email or password' });
+    return res.status(401).json({ message: 'Invalid email/phone or password' });
   }
 
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) {
-    return res.status(401).json({ message: 'Invalid email or password' });
+    return res.status(401).json({ message: 'Invalid email/phone or password' });
   }
 
   // Stamp login analytics (visible in the admin dashboard)

@@ -29,19 +29,47 @@
     <div class="surface rounded-2xl p-8" style="box-shadow:var(--shadow)">
       <div class="text-center mb-6">
         <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white mb-3" style="background:var(--brand)">🏪</div>
-        <h1 class="font-display font-bold text-2xl">Partner Login</h1>
-        <p class="text-sm text-muted mt-1">Manage your restaurant's live orders.</p>
+        <h1 class="font-display font-bold text-2xl">Restaurant Partner</h1>
+        <p class="text-sm text-muted mt-1">Manage your restaurant's live orders, menu & delivery boys.</p>
       </div>
-      <div class="space-y-3">
+      <div class="flex gap-2 mb-5">
+        <button id="tab-login" class="flex-1 py-2 rounded-xl text-sm font-bold" style="background:var(--brand);color:#fff" onclick="pTab('login')">Login</button>
+        <button id="tab-register" class="flex-1 py-2 rounded-xl text-sm font-bold surface" onclick="pTab('register')">Register Restaurant</button>
+      </div>
+      <!-- LOGIN -->
+      <div id="pane-login" class="space-y-3">
         <input id="p-email" type="email" class="input" placeholder="Partner email" autocomplete="email">
         <input id="p-password" type="password" class="input" placeholder="Password" autocomplete="current-password">
         <p id="p-err" class="text-sm hidden" style="color:var(--danger)"></p>
         <button class="btn-brand w-full" onclick="partnerLogin()">Login as Partner</button>
+        <p class="text-xs text-muted text-center mt-4">
+          Demo: <span class="font-medium">partner.doonbiryanihouse@foodhub.in</span> / <span class="font-medium">partner123</span>
+        </p>
       </div>
-      <p class="text-xs text-muted text-center mt-5">
-        Demo: <span class="font-medium">partner.doonbiryanihouse@foodhub.in</span> / <span class="font-medium">partner123</span><br>
-        (pattern: partner.&lt;restaurantname&gt;@foodhub.in — no spaces, lowercase)
-      </p>
+      <!-- REGISTER -->
+      <div id="pane-register" class="space-y-3 hidden">
+        <p class="text-xs font-bold" style="color:var(--brand-dark)">YOUR RESTAURANT</p>
+        <input id="rg-rname" class="input" placeholder="Restaurant name *">
+        <div class="grid grid-cols-2 gap-3">
+          <input id="rg-cuisine" class="input" placeholder="Cuisine * (e.g. Biryani)">
+          <select id="rg-city" class="input">
+            <option value="Dehradun">Dehradun</option>
+            <option value="Patna">Patna</option>
+          </select>
+        </div>
+        <input id="rg-area" class="input" placeholder="Area / locality * (e.g. Rajpur Road)">
+        <input id="rg-address" class="input" placeholder="Full address (optional)">
+        <p class="text-xs font-bold pt-1" style="color:var(--brand-dark)">OWNER ACCOUNT</p>
+        <input id="rg-oname" class="input" placeholder="Your name *">
+        <div class="grid grid-cols-2 gap-3">
+          <input id="rg-phone" class="input" placeholder="Mobile (optional)" inputmode="numeric" maxlength="10">
+          <input id="rg-email" type="email" class="input" placeholder="Email *">
+        </div>
+        <input id="rg-pass" type="password" class="input" placeholder="Password (min 6 chars) *">
+        <p id="rg-err" class="text-sm hidden" style="color:var(--danger)"></p>
+        <button class="btn-brand w-full" onclick="partnerRegister()">Register My Restaurant</button>
+        <p class="text-xs text-muted text-center">Your restaurant goes live after a quick admin approval. You can add your menu right away!</p>
+      </div>
     </div>
   </div>
 
@@ -56,6 +84,10 @@
         <span id="live-dot" class="text-xs font-semibold px-3 py-1.5 rounded-full" style="background:#dcfce7;color:#166534">● LIVE</span>
         <button class="text-sm font-semibold px-3 py-1.5 rounded-xl surface hover:opacity-70" onclick="partnerLogout()">Logout</button>
       </div>
+    </div>
+
+    <div id="pending-banner" class="hidden rounded-2xl p-4 mb-5 text-sm font-medium" style="background:#fef3c7;color:#92400e;box-shadow:var(--shadow)">
+      ⏳ Your restaurant is <b>pending approval</b> — it's hidden from customers for now. Add your menu and delivery boys below; you'll go live after a quick review!
     </div>
 
     <div class="grid grid-cols-3 gap-3 mb-6">
@@ -78,6 +110,18 @@
       <button class="btn-brand !py-2 !px-4 text-sm" onclick="openDishModal()">+ Add Dish</button>
     </div>
     <div id="sec-menu" class="space-y-2 mb-8"></div>
+
+    <h2 class="font-display font-bold text-lg mb-3">🛵 Delivery Boys</h2>
+    <div class="surface rounded-2xl p-4 mb-3" style="box-shadow:var(--shadow)">
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+        <input id="r-name" class="input" placeholder="Name *">
+        <input id="r-phone" class="input" placeholder="10-digit mobile *" inputmode="numeric" maxlength="10">
+        <input id="r-pass" type="password" class="input" placeholder="Password *">
+        <button class="btn-brand" onclick="addRider()">+ Add</button>
+      </div>
+      <p class="text-xs text-muted mt-2">Riders log in at <span class="font-medium">rider.html</span> with their mobile number + password.</p>
+    </div>
+    <div id="sec-riders" class="space-y-2 mb-8"></div>
 
     <h2 class="font-display font-bold text-lg mb-3">🔔 New Orders <span class="text-xs font-medium text-muted">(needs accept / reject)</span></h2>
     <div id="sec-new" class="space-y-3 mb-8"></div>
@@ -157,6 +201,57 @@ async function pFetch(path, { method = "GET", body = null } = {}) {
   return data;
 }
 
+/** Switch between Login and Register tabs */
+function pTab(which) {
+  const isLogin = which === "login";
+  document.getElementById("pane-login").classList.toggle("hidden", !isLogin);
+  document.getElementById("pane-register").classList.toggle("hidden", isLogin);
+  const tl = document.getElementById("tab-login"), tr = document.getElementById("tab-register");
+  tl.className = "flex-1 py-2 rounded-xl text-sm font-bold" + (isLogin ? "" : " surface");
+  tr.className = "flex-1 py-2 rounded-xl text-sm font-bold" + (!isLogin ? "" : " surface");
+  tl.style.cssText = isLogin ? "background:var(--brand);color:#fff" : "";
+  tr.style.cssText = !isLogin ? "background:var(--brand);color:#fff" : "";
+  const pe = document.getElementById("p-err"); pe.classList.add("hidden"); pe.textContent = "";
+  const re = document.getElementById("rg-err"); re.classList.add("hidden"); re.textContent = "";
+}
+
+function rgerr(msg) {
+  const el = document.getElementById("rg-err");
+  el.textContent = msg; el.classList.remove("hidden");
+}
+
+/** Register a new restaurant + owner account (public endpoint) */
+async function partnerRegister() {
+  const body = {
+    restaurantName: document.getElementById("rg-rname").value.trim(),
+    cuisine: document.getElementById("rg-cuisine").value.trim(),
+    city: document.getElementById("rg-city").value,
+    area: document.getElementById("rg-area").value.trim(),
+    address: document.getElementById("rg-address").value.trim(),
+    ownerName: document.getElementById("rg-oname").value.trim(),
+    phone: document.getElementById("rg-phone").value.trim(),
+    email: document.getElementById("rg-email").value.trim(),
+    password: document.getElementById("rg-pass").value,
+  };
+  if (!body.restaurantName || !body.cuisine || !body.area || !body.ownerName || !body.email || !body.password)
+    return rgerr("Please fill all required (*) fields.");
+  try {
+    const res = await fetch(API_BASE + "/partner/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return rgerr(data.message || "Registration failed.");
+    localStorage.setItem(P_TOKEN, data.token);
+    localStorage.setItem(P_USER, JSON.stringify(data.user));
+    enterPanel();
+    toast("Welcome aboard! 🎉 Add your menu while we review your restaurant.", "success");
+  } catch (e) {
+    rgerr("Could not reach the server. Is the backend running?");
+  }
+}
+
 async function partnerLogin() {
   const email = document.getElementById("p-email").value.trim();
   const password = document.getElementById("p-password").value;
@@ -216,8 +311,10 @@ async function enterPanel() {
     document.getElementById("st-today").textContent = me.counts.today;
     document.getElementById("login-view").classList.add("hidden");
     document.getElementById("panel-view").classList.remove("hidden");
-    await loadOrders();
+    document.getElementById("pending-banner").classList.toggle("hidden", me.restaurant.status !== "pending");
     loadMenu();
+    await loadRiders();
+    await loadOrders();
     connectSocket();
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(() => loadOrders(true), 15000); // fallback if socket drops
@@ -238,6 +335,7 @@ function timeAgo(iso) {
 function orderCard(o) {
   const items = o.items.map((it) => `${it.qty}× ${esc(it.name)}`).join(", ");
   const cust = (o.user && o.user.name) ? esc(o.user.name) : "Guest";
+  const custPhone = (o.user && o.user.phone) ? ` <span class="text-xs text-muted font-mono">📞 ${esc(o.user.phone)}</span>` : "";
   const idShort = String(o._id).slice(-6).toUpperCase();
   const when = timeAgo(o.createdAt) + " · " +
     new Date(o.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
@@ -250,7 +348,26 @@ function orderCard(o) {
   } else if (o.status === "preparing") {
     actions = `<button onclick="act('${o._id}','ready')" class="w-full mt-3 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600">🍳 Mark Ready — Out for Delivery</button>`;
   } else if (o.status === "on_the_way") {
-    actions = `<button onclick="act('${o._id}','delivered')" class="w-full mt-3 text-white text-sm font-bold px-4 py-2.5 rounded-xl" style="background:var(--brand)">✅ Mark Delivered</button>`;
+    const riders = window.__riders || [];
+    const assigned = o.assignedRider;
+    let assignBox;
+    if (!riders.length) {
+      assignBox = `<p class="text-xs mt-3 text-muted">Add a delivery boy above to assign this order.</p>`;
+    } else {
+      const opts = riders.map(r =>
+        `<option value="${r._id}"${assigned && String(assigned._id) === String(r._id) ? " selected" : ""}>${esc(r.name)} (${esc(r.phone)})</option>`
+      ).join("");
+      assignBox = `<div class="flex gap-2 mt-3">
+          <select id="rider-${o._id}" class="input !py-2 text-sm flex-1">
+            <option value="">— Select rider —</option>${opts}
+          </select>
+          <button onclick="assignRider('${o._id}')" class="text-sm font-bold px-4 py-2 rounded-xl text-white shrink-0" style="background:var(--brand)">Assign</button>
+        </div>
+        ${assigned
+          ? `<p class="text-xs mt-1 font-bold" style="color:var(--brand-dark)">🛵 ${esc(assigned.name)} (${esc(assigned.phone)})</p>`
+          : `<p class="text-xs mt-1 text-muted">No rider assigned yet</p>`}`;
+    }
+    actions = assignBox + `<button onclick="act('${o._id}','delivered')" class="w-full mt-3 text-white text-sm font-bold px-4 py-2.5 rounded-xl" style="background:var(--brand)">✅ Mark Delivered</button>`;
   }
   const statusPill = o.status === "cancelled"
     ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">CANCELLED</span>`
@@ -262,7 +379,7 @@ function orderCard(o) {
       <p class="font-bold">#${idShort} <span class="text-xs font-medium text-muted">· ${when}</span></p>
       ${statusPill}
     </div>
-    <p class="text-sm font-medium">👤 ${cust}</p>
+    <p class="text-sm font-medium">👤 ${cust}${custPhone}</p>
     <p class="text-sm text-muted mt-1">${esc(items)}</p>
     <p class="text-sm text-muted">📍 ${esc(o.address || "")}</p>
     <p class="font-bold mt-2" style="color:var(--brand-dark)">${inr(o.total)} <span class="text-xs font-medium text-muted">· ${o.paymentMethod === "cod" ? "Cash on Delivery" : esc(o.paymentMethod)}</span></p>
@@ -414,6 +531,72 @@ async function toggleAvail(id) {
   try {
     await pFetch("/partner/menu/" + id + "/availability", { method: "PATCH" });
     loadMenu();
+  } catch (e) {
+    if (e.message !== "unauthorized") toast(e.message, "error");
+  }
+}
+
+/* ---------- delivery boys ---------- */
+
+async function loadRiders() {
+  const wrap = document.getElementById("sec-riders");
+  if (!wrap) return;
+  try {
+    const riders = await pFetch("/partner/riders");
+    window.__riders = riders;
+    wrap.innerHTML = riders.length ? riders.map(r => `
+      <div class="surface rounded-xl p-3 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style="background:#ffedd5">🛵</div>
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-sm">${esc(r.name)}</p>
+          <p class="text-xs text-muted font-mono">${esc(r.phone)}${r.activeDeliveries ? ` · <span class="font-bold" style="color:var(--brand-dark)">${r.activeDeliveries} active</span>` : ""}</p>
+        </div>
+        <button class="text-sm font-semibold px-3 py-1 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="deleteRider('${r._id}')">Remove</button>
+      </div>`).join("")
+      : `<p class="text-sm text-muted">No delivery boys yet — add your first rider above.</p>`;
+  } catch (e) {
+    if (e.message !== "unauthorized") wrap.innerHTML = `<p class="text-sm" style="color:var(--danger)">${esc(e.message)}</p>`;
+  }
+}
+
+async function addRider() {
+  const name = document.getElementById("r-name").value.trim();
+  const phone = document.getElementById("r-phone").value.trim();
+  const password = document.getElementById("r-pass").value;
+  if (!name || !phone || !password) { toast("Name, mobile and password are required.", "error"); return; }
+  try {
+    await pFetch("/partner/riders", { method: "POST", body: { name, phone, password } });
+    toast("Delivery boy added! 🛵", "success");
+    document.getElementById("r-name").value = "";
+    document.getElementById("r-phone").value = "";
+    document.getElementById("r-pass").value = "";
+    await loadRiders();
+    loadOrders(true);
+  } catch (e) {
+    if (e.message !== "unauthorized") toast(e.message, "error");
+  }
+}
+
+async function deleteRider(id) {
+  if (!confirm("Remove this delivery boy?")) return;
+  try {
+    await pFetch("/partner/riders/" + id, { method: "DELETE" });
+    toast("Delivery boy removed.", "success");
+    await loadRiders();
+    loadOrders(true);
+  } catch (e) {
+    if (e.message !== "unauthorized") toast(e.message, "error");
+  }
+}
+
+async function assignRider(orderId) {
+  const sel = document.getElementById("rider-" + orderId);
+  const riderId = sel ? sel.value : "";
+  if (!riderId) { toast("Select a delivery boy first.", "error"); return; }
+  try {
+    await pFetch("/partner/orders/" + orderId + "/assign", { method: "PATCH", body: { riderId } });
+    toast("Rider assigned! 🛵", "success");
+    loadOrders();
   } catch (e) {
     if (e.message !== "unauthorized") toast(e.message, "error");
   }

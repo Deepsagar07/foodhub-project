@@ -20,13 +20,23 @@ const addReview = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Restaurant not found' });
   }
 
-  const review = await Review.create({
-    user: req.user.id,
-    restaurant: restaurant._id,
-    rating,
-    comment: comment ? String(comment).trim() : '',
-    photo: req.file ? fileUrl(req.file) : '',
-  });
+  // One review per user per restaurant: a second review updates the first
+  // instead of skewing the average with duplicates.
+  let review = await Review.findOne({ user: req.user.id, restaurant: restaurant._id });
+  if (review) {
+    review.rating = rating;
+    review.comment = comment ? String(comment).trim() : '';
+    if (req.file) review.photo = fileUrl(req.file);
+    await review.save();
+  } else {
+    review = await Review.create({
+      user: req.user.id,
+      restaurant: restaurant._id,
+      rating,
+      comment: comment ? String(comment).trim() : '',
+      photo: req.file ? fileUrl(req.file) : '',
+    });
+  }
 
   // Recalculate the restaurant's average rating from all its reviews
   const stats = await Review.aggregate([

@@ -69,7 +69,8 @@ const getOrders = asyncHandler(async (req, res) => {
     if (wanted.length) filter.status = { $in: wanted };
   }
   const orders = await Order.find(filter)
-    .populate('user', 'name')
+    .populate('user', 'name phone')
+    .populate('assignedRider', 'name phone')
     .sort({ createdAt: -1 })
     .limit(100);
   res.json(orders);
@@ -167,6 +168,159 @@ const toggleAvailability = asyncHandler(async (req, res) => {
   res.json(item);
 });
 
+
+// ---------- Self-registration + delivery boys ----------
+
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^[6-9]\d{9}$/;
+const SERVICE_CITIES = ['Dehradun', 'Patna'];
+
+function signPartnerToken(user) {
+  return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+}
+
+// POST /api/partner/register (PUBLIC) -> restaurant owner signs up their own outlet.
+// The restaurant starts as 'pending' (hidden from customers) until an admin approves it.
+const registerRestaurant = asyncHandler(async (req, res) => {
+  const { restaurantName, cuisine, area, city, address, phone, ownerName, email, password } = req.body;
+
+  if (!restaurantName || !restaurantName.trim()) return res.status(400).json({ message: 'Restaurant name is required' });
+  if (!cuisine || !cuisine.trim()) return res.status(400).json({ message: 'Cuisine is required' });
+  if (!area || !area.trim()) return res.status(400).json({ message: 'Area/locality is required' });
+  const cleanCity = String(city || '').trim();
+  const matchedCity = SERVICE_CITIES.find((c) => c.toLowerCase() === cleanCity.toLowerCase());
+  if (!matchedCity) {
+    return res.status(400).json({ message: 'We currently serve only Dehradun and Patna' });
+  }
+  if (!ownerName || !ownerName.trim()) return res.status(400).json({ message: 'Owner name is required' });
+  if (!email || !EMAIL_RE.test(String(email).trim())) {
+    return res.status(400).json({ message: 'A valid email is required' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+  }
+  if (phone && !PHONE_RE.test(String(phone).trim())) {
+    return res.status(400).json({ message: 'Phone must be a valid 10-digit mobile number' });
+  }
+
+  const normalizedEmail = String(email).toLowerCase().trim();
+  const existing = await User.findOne({ email: normalizedEmail });
+  if (existing) return res.status(400).json({ message: 'Email is already registered' });
+
+  const restaurant = await Restaurant.create({
+    name: restaurantName.trim(),
+    cuisine: cuisine.trim(),
+    area: area.trim(),
+    city: matchedCity,
+    address: address ? String(address).trim() : '',
+    status: 'pending', // hidden from customers until admin approval
+  });
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const user = await User.create({
+    name: ownerName.trim(),
+    email: normalizedEmail,
+    phone: phone ? String(phone).trim() : '',
+    passwordHash,
+    role: 'restaurant',
+    restaurant: restaurant._id,
+    signupIp: req.ip || '',
+  });
+
+  const safe = { id: user._id, name: user.name, email: user.email, role: user.role, restaurantId: String(restaurant._id) };
+  res.status(201).json({ token: signPartnerToken(user), user: safe, restaurant });
+});
+
+// GET /api/partner/riders -> my outlet's delivery boys
+const getRiders = asyncHandler(async (req, res) => {
+  const riders = await User.find({ restaurant: req.restaurantId, role: 'delivery' })
+    .select('name phone createdAt')
+    .sort({ name: 1 })
+    .lean();
+  const withCounts = await Promise.all(
+    riders.map(async (r) => ({
+      ...r,
+      activeDeliveries: await Order.countDocuments({ assignedRider: r._id, status: 'on_the_way' }),
+    }))
+  );
+  res.json(withCounts);
+});
+
+// POST /api/partner/riders { name, phone, password } -> add a delivery boy to MY outlet
+const createRider = asyncHandler(async (req, res) => {
+  const { name, phone, password } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ message: 'Rider name is required' });
+  const cleanPhone = String(phone || '').trim();
+  if (!PHONE_RE.test(cleanPhone)) {
+    return res.status(400).json({ message: 'A valid 10-digit mobile number is required' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+  }
+  const existing = await User.findOne({ phone: cleanPhone });
+  if (existing) return res.status(400).json({ message: 'This phone number is already registered' });
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const rider = await User.create({
+    name: name.trim(),
+    email: `rider.${cleanPhone}@foodhub.in`, // internal only — riders log in with their phone number
+    phone: cleanPhone,
+    passwordHash,
+    role: 'delivery',
+    restaurant: req.restaurantId,
+    signupIp: req.ip || '',
+  });
+  res.status(201).json({ id: rider._id, name: rider.name, phone: rider.phone });
+});
+
+// DELETE /api/partner/riders/:id -> remove one of MY delivery boys
+const deleteRider = asyncHandler(async (req, res) => {
+  const rider = await User.findById(req.params.id);
+  if (!rider || rider.role !== 'delivery') {
+    return res.status(404).json({ message: 'Delivery boy not found' });
+  }
+  if (String(rider.restaurant) !== String(req.restaurantId)) {
+    return res.status(403).json({ message: "Forbidden: this rider belongs to another restaurant" });
+  }
+  // Unassign from any active deliveries first
+  await Order.updateMany(
+    { assignedRider: rider._id, status: 'on_the_way' },
+    { $set: { assignedRider: null } }
+  );
+  await rider.deleteOne();
+  res.json({ message: 'Delivery boy removed' });
+});
+
+// PATCH /api/partner/orders/:id/assign { riderId } -> assign MY delivery boy to an on-the-way order
+const assignRider = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  if (!order) return res.status(404).json({ message: 'Order not found' });
+  if (String(order.restaurant) !== String(req.restaurantId)) {
+    return res.status(403).json({ message: 'Forbidden: this order belongs to another restaurant' });
+  }
+  if (order.status !== 'on_the_way') {
+    return res.status(400).json({ message: 'A rider can only be assigned once the order is on the way' });
+  }
+  const rider = await User.findById(req.body.riderId);
+  if (!rider || rider.role !== 'delivery' || String(rider.restaurant) !== String(req.restaurantId)) {
+    return res.status(400).json({ message: 'Invalid rider for this restaurant' });
+  }
+  order.assignedRider = rider._id;
+  await order.save();
+  // Nudge the customer's tracker so the rider info appears live
+  const io = req.app.get('io');
+  if (io) {
+    io.to('order:' + order._id).emit('order-status', {
+      orderId: String(order._id),
+      status: order.status,
+    });
+  }
+  res.json(order);
+});
+
 module.exports = {
   getMyRestaurant,
   getOrders,
@@ -179,4 +333,9 @@ module.exports = {
   updateMenuItem,
   deleteMenuItem,
   toggleAvailability,
+  registerRestaurant,
+  getRiders,
+  createRider,
+  deleteRider,
+  assignRider,
 };

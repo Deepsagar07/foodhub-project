@@ -44,4 +44,22 @@ async function restaurantOnly(req, res, next) {
   }
 }
 
-module.exports = { protect, adminOnly, restaurantOnly };
+// riderOnly: must run AFTER protect. Allows only delivery-rider accounts
+// (role='delivery'), and attaches their restaurant id as req.restaurantId.
+async function riderOnly(req, res, next) {
+  if (!req.user || req.user.role !== 'delivery') {
+    return res.status(403).json({ message: 'Forbidden: delivery rider access required' });
+  }
+  try {
+    const user = await User.findById(req.user.id).select('restaurant');
+    if (!user || !user.restaurant) {
+      return res.status(403).json({ message: 'Forbidden: no restaurant linked to this account' });
+    }
+    req.restaurantId = String(user.restaurant);
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { protect, adminOnly, restaurantOnly, riderOnly };

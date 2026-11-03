@@ -145,4 +145,44 @@ const getUsers = asyncHandler(async (req, res) => {
   res.json(withOrders);
 });
 
-module.exports = { getStats, getAllOrders, createMenuItem, updateMenuItem, deleteMenuItem, getVisits, getUsers };
+// GET /api/admin/restaurants (admin) -> every restaurant with its partner,
+// rider/dish/order counts and approval status (pending first)
+const getRestaurants = asyncHandler(async (req, res) => {
+  const restaurants = await Restaurant.find().sort({ createdAt: -1 }).lean();
+  const out = await Promise.all(
+    restaurants.map(async (r) => {
+      const [partner, riderCount, dishCount, orderCount] = await Promise.all([
+        User.findOne({ restaurant: r._id, role: 'restaurant' }).select('name email phone').lean(),
+        User.countDocuments({ restaurant: r._id, role: 'delivery' }),
+        MenuItem.countDocuments({ restaurant: r._id }),
+        Order.countDocuments({ restaurant: r._id }),
+      ]);
+      return { ...r, partner, riderCount, dishCount, orderCount };
+    })
+  );
+  out.sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1));
+  res.json(out);
+});
+
+// PATCH /api/admin/restaurants/:id/approve (admin) -> make a pending restaurant live
+const approveRestaurant = asyncHandler(async (req, res) => {
+  const r = await Restaurant.findById(req.params.id);
+  if (!r) return res.status(404).json({ message: 'Restaurant not found' });
+  r.status = 'active';
+  await r.save();
+  res.json(r);
+});
+
+// DELETE /api/admin/restaurants/:id (admin) -> reject & remove a pending restaurant
+// (plus its partner account, riders and menu items — it never went live,
+// so there are no customer orders to worry about)
+const rejectRestaurant = asyncHandler(async (req, res) => {
+  const r = await Restaurant.findById(req.params.id);
+  if (!r) return res.status(404).json({ message: 'Restaurant not found' });
+  await MenuItem.deleteMany({ restaurant: r._id });
+  await User.deleteMany({ restaurant: r._id, role: { $in: ['restaurant', 'delivery'] } });
+  await r.deleteOne();
+  res.json({ message: 'Restaurant rejected and removed' });
+});
+
+module.exports = { getStats, getAllOrders, createMenuItem, updateMenuItem, deleteMenuItem, getVisits, getUsers, getRestaurants, approveRestaurant, rejectRestaurant };

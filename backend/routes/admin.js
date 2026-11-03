@@ -10,6 +10,9 @@ const {
   deleteMenuItem,
   getVisits,
   getUsers,
+  getRestaurants,
+  approveRestaurant,
+  rejectRestaurant,
 } = require('../controllers/adminController');
 
 const router = express.Router();
@@ -20,6 +23,9 @@ router.get('/stats', getStats);
 router.get('/orders', getAllOrders);
 router.get('/visits', getVisits);
 router.get('/users', getUsers);
+router.get('/restaurants', getRestaurants);
+router.patch('/restaurants/:id/approve', approveRestaurant);
+router.delete('/restaurants/:id', rejectRestaurant);
 router.post('/menu', upload.single('image'), createMenuItem);
 router.put('/menu/:id', upload.single('image'), updateMenuItem);
 router.delete('/menu/:id', deleteMenuItem);

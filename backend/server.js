@@ -44,6 +44,7 @@ app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/stats', require('./routes/stats')); // public live counters (no auth)
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/partner', require('./routes/partner')); // restaurant-side order management
+app.use('/api/rider', require('./routes/rider')); // delivery boy panel
 app.use('/api/analytics', require('./routes/analytics')); // visitor tracking beacon (public)
 
 // Simple health check
