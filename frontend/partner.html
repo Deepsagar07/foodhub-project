@@ -473,10 +473,10 @@ async function loadMenu() {
         <img src="${m.image || ""}" onerror="this.style.display='none'" class="w-14 h-14 rounded-xl object-cover" alt="">
         <div class="flex-1 min-w-0">
           <p class="font-bold text-sm truncate">${m.name} ${m.isVeg ? "🟢" : "🔴"}</p>
-          <p class="text-xs text-muted">₹${m.price} ${m.available ? "" : "· ⛔ unavailable"}</p>
+          <p class="text-xs text-muted">₹${m.price} ${m.isAvailable !== false ? "" : "· ⛔ unavailable"}</p>
         </div>
         <div class="flex flex-col gap-1">
-          <button class="text-xs font-bold px-2 py-1 rounded-lg surface hover:opacity-70" onclick="toggleAvail('${m._id}')">${m.available ? "Hide" : "Show"}</button>
+          <button class="text-xs font-bold px-2 py-1 rounded-lg surface hover:opacity-70" onclick="toggleAvail('${m._id}')">${m.isAvailable !== false ? "Hide" : "Show"}</button>
           <button class="text-xs font-bold px-2 py-1 rounded-lg surface hover:opacity-70" onclick="openDishModal('${m._id}')">Edit</button>
           <button class="text-xs font-bold px-2 py-1 rounded-lg text-white bg-red-600" onclick="deleteDish('${m._id}')">Del</button>
         </div>
