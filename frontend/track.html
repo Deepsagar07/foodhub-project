@@ -95,11 +95,11 @@ function render(o) {
     } else if (i < currentIdx) {
       // Done steps: show meaningful label
       if (s.key === "preparing") sub = "Prepared";
-      else if (s.key === "on_the_way") sub = "Picked up";
+      else if (s.key === "on_the_way") sub = "Delivered";
       else sub = "";
     } else if (i === currentIdx) {
       if (s.key === "delivered") sub = "Delivered";
-      else if (s.key === "on_the_way") sub = "Coming soon…";
+      else if (s.key === "on_the_way") sub = "Picked up";
       else sub = "In progress…";
     } else {
       sub = "Pending";
