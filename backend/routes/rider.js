@@ -11,5 +11,7 @@ router.use(protect, riderOnly);
 router.get('/me', riderController.getMe);
 router.get('/orders', riderController.getOrders);
 router.patch('/orders/:id/delivered', riderController.markDelivered);
+router.patch('/orders/:id/pickedup', riderController.markPickedUp);
+router.post('/location', riderController.updateLocation);
 
 module.exports = router;

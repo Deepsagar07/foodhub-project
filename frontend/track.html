@@ -46,6 +46,9 @@ const STEPS = [
   { key: "delivered",  label: "Delivered",     icon: "📦" },
 ];
 
+// Live ETA state (rider tracking)
+let etaState = { lat: null, lng: null, arrived: false, pickedUp: false };
+
 /** "On the way" / "on-the-way" / "On The Way" -> "on_the_way" */
 function normStatus(s) {
   return String(s || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
@@ -69,6 +72,14 @@ async function load() {
 }
 
 function render(o) {
+  window.__order = o; // store for ETA updates
+  // Restore rider tracking state from order data
+  if (o.riderLat && o.riderLng) {
+    etaState.lat = o.riderLat;
+    etaState.lng = o.riderLng;
+  }
+  if (o.arrivedAt) etaState.arrived = true;
+  if (o.pickedUpAt) etaState.pickedUp = true;
   document.getElementById("order-id").textContent = "Order #" + String(o._id || o.id).slice(-8).toUpperCase();
   const wrap = document.getElementById("content");
   const status = normStatus(o.status);
@@ -141,6 +152,7 @@ function render(o) {
       </div>
       ${timeline}
     </div>
+    <div id="eta-box" class="hidden surface rounded-2xl p-4 mb-5 text-center" style="box-shadow:var(--shadow);border:2px solid var(--brand)"></div>
     ${riderBox}
     <div class="surface rounded-2xl p-6" style="box-shadow:var(--shadow)">
       <h3 class="font-display font-semibold mb-3">Items</h3>
@@ -151,6 +163,9 @@ function render(o) {
 
   // stop polling once delivered
   if (status === "delivered") clearInterval(timer);
+
+  // Update live ETA box
+  renderEta();
 }
 
 function formatAddress(a) {
@@ -191,7 +206,63 @@ if (!OID) {
         toast("Order update: " + data.status.replace(/_/g, " "), "success");
       }
     });
+    // Live rider location → update ETA timer
+    socket.on("rider-location", (data) => {
+      if (data) updateEta(data);
+    });
   } catch (e) { /* websocket unavailable — polling covers it */ }
+}
+
+// ---------- Live ETA ----------
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function updateEta(data) {
+  if (data.lat && data.lng) {
+    etaState.lat = data.lat;
+    etaState.lng = data.lng;
+  }
+  if (data.arrived) etaState.arrived = true;
+  if (data.pickedUp) etaState.pickedUp = true;
+  renderEta();
+}
+
+function renderEta() {
+  const el = document.getElementById("eta-box");
+  if (!el) return;
+  const o = window.__order;
+  if (!o || o.status !== "on_the_way") {
+    el.classList.add("hidden");
+    return;
+  }
+  el.classList.remove("hidden");
+  let html = "";
+  // Picked up state (with time)
+  if (o.pickedUpAt || etaState.pickedUp) {
+    const t = o.pickedUpAt ? fmtTime(o.pickedUpAt) : "";
+    html += `<p class="text-sm font-semibold" style="color:var(--brand)">📦 Picked up${t ? " · " + t : ""}</p>`;
+  }
+  // ETA / Arrived (with time)
+  if (etaState.arrived || o.arrivedAt) {
+    const t = o.arrivedAt ? fmtTime(o.arrivedAt) : "";
+    html += `<p class="font-display font-bold text-lg">🎉 Arrived!${t ? " · " + t : ""}</p>`;
+    html += `<p class="text-sm text-muted">Your rider is at your location.</p>`;
+  } else if (etaState.lat && o.deliveryLat && o.deliveryLng) {
+    const distKm = haversine(etaState.lat, etaState.lng, o.deliveryLat, o.deliveryLng);
+    const etaMin = Math.max(1, Math.round(distKm / 0.4)); // ~24 km/h avg city speed
+    html += `<p class="font-display font-bold text-lg">⏱ Arriving in ~${etaMin} min</p>`;
+    html += `<p class="text-sm text-muted">${distKm.toFixed(1)} km away</p>`;
+  } else if (o.assignedRider) {
+    html += `<p class="text-sm text-muted">🛵 ${esc(o.assignedRider.name)} is on the way…</p>`;
+  }
+  el.innerHTML = html;
 }
 </script>
 </body>

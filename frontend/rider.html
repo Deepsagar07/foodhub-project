@@ -185,9 +185,20 @@ function deliveryCard(o) {
   const cust = (o.user && o.user.name) || "Customer";
   const custPhone = (o.user && o.user.phone) ? ` <span class="text-xs text-muted font-mono">📞 ${esc(o.user.phone)}</span>` : "";
   const items = (o.items || []).map(i => `${i.qty}× ${i.name}`).join(", ");
-  const action = o.status === "on_the_way"
-    ? `<button onclick="markDelivered('${o._id}')" class="w-full mt-3 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700">✅ Mark Delivered</button>`
-    : `<span class="inline-block mt-3 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">DELIVERED</span>`;
+  const tracking = window.__tracking && window.__tracking[o._id];
+  let action = "";
+  if (o.status === "on_the_way") {
+    action = `<div class="flex gap-2 mt-3">
+      ${!o.pickedUpAt ? `<button onclick="markPickedUp('${o._id}')" class="flex-1 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700">📦 Pick Up</button>` : ""}
+      <button onclick="markDelivered('${o._id}')" class="flex-1 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700">✅ Mark Delivered</button>
+    </div>
+    <button onclick="toggleTracking('${o._id}')" class="w-full mt-2 text-sm font-bold px-4 py-2 rounded-xl surface hover:opacity-70">
+      ${tracking ? "⏸ Stop Live Location" : "📍 Share Live Location"}
+    </button>
+    ${tracking ? `<p class="text-xs text-center mt-1" style="color:var(--brand)">● Sharing live location…</p>` : ""}`;
+  } else {
+    action = `<span class="inline-block mt-3 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">DELIVERED</span>`;
+  }
   return `<div class="surface rounded-2xl p-4" style="box-shadow:var(--shadow)">
     <div class="flex items-center justify-between mb-1">
       <p class="font-bold">#${idShort} <span class="text-xs font-medium text-muted">· ${when}</span></p>
@@ -220,12 +231,72 @@ async function loadDeliveries(silent) {
 
 async function markDelivered(id) {
   if (!confirm("Mark this order as delivered?")) return;
+  stopTracking(id);
   try {
     await rFetch("/rider/orders/" + id + "/delivered", { method: "PATCH" });
     toast("Delivered! 🎉", "success");
     loadDeliveries();
   } catch (e) {
     if (e.message !== "unauthorized") toast(e.message, "error");
+  }
+}
+
+async function markPickedUp(id) {
+  try {
+    await rFetch("/rider/orders/" + id + "/pickedup", { method: "PATCH" });
+    toast("Picked up! 📦 Share your live location.", "success");
+    loadDeliveries();
+    // Auto-start tracking on pickup
+    toggleTracking(id);
+  } catch (e) {
+    if (e.message !== "unauthorized") toast(e.message, "error");
+  }
+}
+
+// ---------- Live location tracking ----------
+window.__tracking = {};
+window.__watchers = {};
+
+function toggleTracking(orderId) {
+  if (window.__tracking[orderId]) {
+    stopTracking(orderId);
+  } else {
+    startTracking(orderId);
+  }
+  loadDeliveries(true);
+}
+
+function startTracking(orderId) {
+  if (!navigator.geolocation) {
+    toast("Geolocation not supported on this device.", "error");
+    return;
+  }
+  window.__tracking[orderId] = true;
+  toast("📍 Sharing live location…", "success");
+  // Send immediately, then every 15 seconds
+  sendLocation(orderId);
+  window.__watchers[orderId] = setInterval(() => sendLocation(orderId), 15000);
+}
+
+function stopTracking(orderId) {
+  if (window.__watchers[orderId]) {
+    clearInterval(window.__watchers[orderId]);
+    delete window.__watchers[orderId];
+  }
+  delete window.__tracking[orderId];
+}
+
+async function sendLocation(orderId) {
+  try {
+    const pos = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: true });
+    });
+    await rFetch("/rider/location", {
+      method: "POST",
+      body: { orderId, lat: pos.coords.latitude, lng: pos.coords.longitude },
+    });
+  } catch (e) {
+    // Silent fail — will retry on next interval
   }
 }
 

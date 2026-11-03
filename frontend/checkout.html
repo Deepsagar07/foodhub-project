@@ -154,6 +154,15 @@ async function placeOrder() {
   try {
     // Backend stores address as one string, so format it here
     const addressStr = `${name}, ${street}, ${city} - ${pincode}, Phone: ${phone}`;
+    // Try to capture GPS for live delivery tracking (non-blocking)
+    let deliveryLat = null, deliveryLng = null;
+    try {
+      const pos = await new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { timeout: 3000 });
+      });
+      if (pos) { deliveryLat = pos.coords.latitude; deliveryLng = pos.coords.longitude; }
+    } catch (e) {}
     const data = await apiFetch("/orders", {
       method: "POST",
       auth: true,
@@ -163,6 +172,7 @@ async function placeOrder() {
         address: addressStr,
         couponCode: coupon ? coupon.code : undefined,
         paymentMethod,   // "upi" | "card" | "cod" (backend enum)
+        deliveryLat, deliveryLng,
       },
     });
     const orderId = (data.order && (data.order._id || data.order.id)) || data._id || data.id || data.orderId;

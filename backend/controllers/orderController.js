@@ -10,10 +10,10 @@ const PAYMENT_METHODS = ['cod', 'upi', 'card'];
 const STATUSES = ['placed', 'preparing', 'on_the_way', 'delivered', 'cancelled'];
 
 // POST /api/orders (protect)
-// Body: { restaurantId, items: [{ menuItemId, qty }], address, couponCode?, paymentMethod? }
+// Body: { restaurantId, items: [{ menuItemId, qty }], address, couponCode?, paymentMethod?, deliveryLat?, deliveryLng? }
 // Prices are ALWAYS taken from the database, never from the client.
 const createOrder = asyncHandler(async (req, res) => {
-  const { restaurantId, items, address, couponCode, paymentMethod } = req.body;
+  const { restaurantId, items, address, couponCode, paymentMethod, deliveryLat, deliveryLng } = req.body;
 
   if (!restaurantId) {
     return res.status(400).json({ message: 'restaurantId is required' });
@@ -99,6 +99,8 @@ const createOrder = asyncHandler(async (req, res) => {
     address: String(address).trim(),
     paymentMethod: paymentMethod || 'cod',
     couponCode: couponCode ? String(couponCode).toUpperCase().trim() : '',
+    deliveryLat: typeof deliveryLat === 'number' ? deliveryLat : null,
+    deliveryLng: typeof deliveryLng === 'number' ? deliveryLng : null,
   });
 
   // Notify the restaurant's partner panel in real time (it beeps on 'new-order').

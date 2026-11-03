@@ -48,4 +48,73 @@ const markDelivered = asyncHandler(async (req, res) => {
   res.json(order);
 });
 
-module.exports = { getMe, getOrders, markDelivered };
+// POST /api/rider/location -> rider shares live GPS { orderId, lat, lng }
+// Emits 'rider-location' to the order room for live tracking on track.html
+const updateLocation = asyncHandler(async (req, res) => {
+  const { orderId, lat, lng } = req.body;
+  if (!orderId || typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ message: 'orderId, lat, lng required' });
+  }
+  const order = await Order.findById(orderId);
+  if (!order) return res.status(404).json({ message: 'Order not found' });
+  if (String(order.assignedRider) !== String(req.user.id)) {
+    return res.status(403).json({ message: 'Forbidden: this order is not assigned to you' });
+  }
+  order.riderLat = lat;
+  order.riderLng = lng;
+  order.riderLocationAt = new Date();
+  // Auto-detect arrival: if rider is within 150m of delivery point, mark arrived
+  if (order.deliveryLat && order.deliveryLng) {
+    const d = haversine(lat, lng, order.deliveryLat, order.deliveryLng);
+    if (d < 0.15 && !order.arrivedAt) {
+      order.arrivedAt = new Date();
+    }
+  }
+  await order.save();
+  const io = req.app.get('io');
+  if (io) {
+    io.to('order:' + order._id).emit('rider-location', {
+      orderId: String(order._id),
+      lat, lng,
+      arrived: !!order.arrivedAt,
+      updatedAt: order.riderLocationAt,
+    });
+  }
+  res.json({ ok: true, arrived: !!order.arrivedAt });
+});
+
+// PATCH /api/rider/orders/:id/pickedup -> rider confirms pickup (starts tracking)
+const markPickedUp = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  if (!order) return res.status(404).json({ message: 'Order not found' });
+  if (String(order.assignedRider) !== String(req.user.id)) {
+    return res.status(403).json({ message: 'Forbidden: this order is not assigned to you' });
+  }
+  if (order.status !== 'on_the_way') {
+    return res.status(400).json({ message: `Cannot mark picked up: order is "${order.status}"` });
+  }
+  order.pickedUpAt = new Date();
+  await order.save();
+  const io = req.app.get('io');
+  if (io) {
+    io.to('order:' + order._id).emit('rider-location', {
+      orderId: String(order._id),
+      pickedUp: true,
+      pickedUpAt: order.pickedUpAt,
+    });
+  }
+  res.json(order);
+});
+
+// Haversine distance in km
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+module.exports = { getMe, getOrders, markDelivered, updateLocation, markPickedUp };

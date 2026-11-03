@@ -36,6 +36,14 @@ const orderSchema = new mongoose.Schema(
     // The restaurant's own delivery boy assigned to this order (set by the partner)
     assignedRider: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     couponCode: { type: String, default: '' }, // coupon applied (for per-user usage limits)
+    // Live delivery tracking
+    deliveryLat: { type: Number, default: null }, // customer delivery GPS (from checkout)
+    deliveryLng: { type: Number, default: null },
+    riderLat: { type: Number, default: null }, // rider's live GPS
+    riderLng: { type: Number, default: null },
+    riderLocationAt: { type: Date, default: null }, // last rider location update
+    pickedUpAt: { type: Date, default: null }, // when rider picked up the order
+    arrivedAt: { type: Date, default: null }, // when rider reached customer
   },
   { timestamps: true }
 );
