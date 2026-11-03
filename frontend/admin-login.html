@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodHub — Admin Login</title>
+<script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
+      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-body">
+
+<div id="navbar" class="sticky top-0 z-30 surface" style="box-shadow:var(--shadow)"></div>
+
+<main class="max-w-md mx-auto px-4 py-12">
+  <div class="surface rounded-2xl p-8" style="box-shadow:var(--shadow)">
+    <div class="text-center mb-6">
+      <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white mb-3" style="background:#1f2937">🛡️</div>
+      <h1 class="font-display font-bold text-2xl">Admin Login</h1>
+      <p class="text-sm text-muted mt-1">Restricted area — administrators only.</p>
+    </div>
+    <div class="space-y-3">
+      <input id="email" type="email" class="input" placeholder="Admin email address" autocomplete="email">
+      <div class="relative"><input id="password" type="password" class="input pr-11" placeholder="Password" autocomplete="current-password"><button type="button" onclick="togglePw('password', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      <p id="err" class="text-sm hidden" style="color:var(--danger)"></p>
+      <button id="btn" class="btn-brand w-full" onclick="doAdminLogin()">Login to Dashboard</button>
+    </div>
+    <p class="text-sm text-muted text-center mt-5">
+      Customer? <a href="login.html" class="font-semibold" style="color:var(--brand-dark)">Go to customer login</a>
+    </p>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/common.js"></script>
+<script>
+/** Admin-only login: verifies the role before entering the dashboard. */
+async function doAdminLogin() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const err = document.getElementById("err");
+  const btn = document.getElementById("btn");
+  err.classList.add("hidden");
+
+  if (!email || !password) {
+    err.textContent = "Enter your admin email and password.";
+    err.classList.remove("hidden");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Logging in…";
+  try {
+    const user = await login(email, password);
+    if (user.role !== "admin") {
+      // Not an admin — clear the session and refuse entry
+      localStorage.removeItem("fh_token");
+      localStorage.removeItem("fh_user");
+      throw new Error("This login is for admins only.");
+    }
+    toast("Welcome back, Admin! 🛡️", "success");
+    location.href = "admin.html";
+  } catch (e) {
+    err.textContent = e.message;
+    err.classList.remove("hidden");
+    btn.disabled = false;
+    btn.textContent = "Login to Dashboard";
+  }
+}
+
+// Enter key submits the form
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") doAdminLogin();
+});
+
+initCommon();
+</script>
+</body>
+</html>
