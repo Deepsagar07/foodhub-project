@@ -29,25 +29,11 @@
     <div class="surface rounded-2xl p-8" style="box-shadow:var(--shadow)">
       <div class="text-center mb-6">
         <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white mb-3" style="background:var(--brand)">🏪</div>
-        <h1 class="font-display font-bold text-2xl">Restaurant Partner</h1>
-        <p class="text-sm text-muted mt-1">Manage your restaurant's live orders, menu & delivery boys.</p>
-      </div>
-      <div class="flex gap-2 mb-5">
-        <button id="tab-login" class="flex-1 py-2 rounded-xl text-sm font-bold" style="background:var(--brand);color:#fff" onclick="pTab('login')">Login</button>
-        <button id="tab-register" class="flex-1 py-2 rounded-xl text-sm font-bold surface" onclick="pTab('register')">Register Restaurant</button>
-      </div>
-      <!-- LOGIN -->
-      <div id="pane-login" class="space-y-3">
-        <input id="p-email" type="email" class="input" placeholder="Partner email" autocomplete="email">
-        <div class="relative"><input id="p-password" type="password" class="input pr-11" placeholder="Password" autocomplete="current-password"><button type="button" onclick="togglePw('p-password', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
-        <p id="p-err" class="text-sm hidden" style="color:var(--danger)"></p>
-        <button class="btn-brand w-full" onclick="partnerLogin()">Login as Partner</button>
-        <p class="text-xs text-muted text-center mt-4">
-          Demo: <span class="font-medium">partner.doonbiryanihouse@foodhub.in</span> / <span class="font-medium">partner123</span>
-        </p>
+        <h1 class="font-display font-bold text-2xl">Register Your Restaurant</h1>
+        <p class="text-sm text-muted mt-1">Join FoodHub — manage live orders, menu & delivery boys.</p>
       </div>
       <!-- REGISTER -->
-      <div id="pane-register" class="space-y-3 hidden">
+      <div id="pane-register" class="space-y-3">
         <p class="text-xs font-bold" style="color:var(--brand-dark)">YOUR RESTAURANT</p>
         <input id="rg-rname" class="input" placeholder="Restaurant name *">
         <div class="grid grid-cols-2 gap-3">
@@ -66,9 +52,12 @@
           <input id="rg-email" type="email" class="input" placeholder="Email *">
         </div>
         <div class="relative"><input id="rg-pass" type="password" class="input pr-11" placeholder="Password (min 6 chars) *"><button type="button" onclick="togglePw('rg-pass', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
-        <p id="rg-err" class="text-sm hidden" style="color:var(--danger)"></p>
+        <p id="p-err" class="text-sm hidden" style="color:var(--danger)"></p>
         <button class="btn-brand w-full" onclick="partnerRegister()">Register My Restaurant</button>
         <p class="text-xs text-muted text-center">Your restaurant goes live after a quick admin approval. You can add your menu right away!</p>
+        <p class="text-sm text-muted text-center mt-2">
+          Already registered? <a href="login.html" class="font-semibold" style="color:var(--brand-dark)">Log in here</a>
+        </p>
       </div>
     </div>
   </div>
@@ -209,24 +198,8 @@ async function pFetch(path, { method = "GET", body = null } = {}) {
 
 /** confirm partner login, then load panel */
 
-/** Switch between Login and Register tabs */
-function pTab(which) {
-  const isLogin = which === "login";
-  document.getElementById("pane-login").classList.toggle("hidden", !isLogin);
-  document.getElementById("pane-register").classList.toggle("hidden", isLogin);
-  const tl = document.getElementById("tab-login"), tr = document.getElementById("tab-register");
-  tl.className = "flex-1 py-2 rounded-xl text-sm font-bold" + (isLogin ? "" : " surface");
-  tr.className = "flex-1 py-2 rounded-xl text-sm font-bold" + (!isLogin ? "" : " surface");
-  tl.style.cssText = isLogin ? "background:var(--brand);color:#fff" : "";
-  tr.style.cssText = !isLogin ? "background:var(--brand);color:#fff" : "";
-  const pe = document.getElementById("p-err"); pe.classList.add("hidden"); pe.textContent = "";
-  const re = document.getElementById("rg-err"); re.classList.add("hidden"); re.textContent = "";
-}
 
-function rgerr(msg) {
-  const el = document.getElementById("rg-err");
-  el.textContent = msg; el.classList.remove("hidden");
-}
+function rgerr(msg) { perr(msg); }
 
 /** Register a new restaurant + owner account (public endpoint) */
 async function partnerRegister() {
@@ -260,28 +233,6 @@ async function partnerRegister() {
   }
 }
 
-async function partnerLogin() {
-  const email = document.getElementById("p-email").value.trim();
-  const password = document.getElementById("p-password").value;
-  if (!email || !password) return perr("Enter your partner email and password.");
-  try {
-    const res = await fetch(API_BASE + "/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return perr(data.message || "Login failed.");
-    if (data.user.role !== "restaurant") {
-      return perr("This login is for restaurant partners only. Customers use the normal login page.");
-    }
-    localStorage.setItem(P_TOKEN, data.token);
-    localStorage.setItem(P_USER, JSON.stringify(data.user));
-    enterPanel();
-  } catch (e) {
-    perr("Could not reach the server. Is the backend running?");
-  }
-}
 
 function partnerLogout() {
   try {
