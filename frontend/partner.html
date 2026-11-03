@@ -7,13 +7,7 @@
 <script>try{var t=localStorage.getItem('fh_theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
-  tailwind.config = {
-    darkMode: 'class',
-    theme: { extend: {
-      colors: { brand: { 500:'#f97316', 600:'#ea580c', 700:'#c2410c' } },
-      fontFamily: { display: ['Poppins','sans-serif'], body: ['Inter','sans-serif'] }
-    } }
-  };
+tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { display: ['Georgia','serif'], body: ['system-ui','sans-serif'] } } } };
 </script>
 <link rel="stylesheet" href="css/style.css">
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -24,7 +18,7 @@
 
 <main class="max-w-3xl mx-auto px-4 py-8">
 
-  <!-- ============ LOGIN VIEW ============ -->
+  <!-- ==================== LOGIN / REGISTER VIEW ==================== -->
   <div id="login-view" class="max-w-md mx-auto">
     <div class="surface rounded-2xl p-8" style="box-shadow:var(--shadow)">
       <div class="text-center mb-6">
@@ -32,22 +26,30 @@
         <h1 class="font-display font-bold text-2xl">Restaurant Partner</h1>
         <p class="text-sm text-muted mt-1">Manage live orders, menu & delivery boys.</p>
       </div>
-      <!-- TABS -->
+
+      <!-- Tabs -->
       <div class="flex gap-2 mb-6">
         <button id="tab-login" onclick="pTab('login')" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white" style="background:var(--brand)">Login</button>
         <button id="tab-register" onclick="pTab('register')" class="flex-1 py-2.5 rounded-xl text-sm font-bold surface text-muted hover:opacity-70">Register</button>
       </div>
-      <!-- LOGIN -->
+
+      <!-- LOGIN PANE -->
       <div id="pane-login" class="space-y-3">
-        <input id="p-email" type="email" class="input" placeholder="Email *">
-        <div class="relative"><input id="p-password" type="password" class="input pr-11" placeholder="Password *"><button type="button" onclick="togglePw('p-password', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+        <input id="p-email" type="email" class="input" placeholder="Email *" autocomplete="email">
+        <div class="relative">
+          <input id="p-password" type="password" class="input pr-11" placeholder="Password *" autocomplete="current-password">
+          <button type="button" onclick="togglePw('p-password', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         <p id="p-login-err" class="text-sm hidden" style="color:var(--danger)"></p>
         <button class="btn-brand w-full" onclick="partnerLogin()">Login to Dashboard</button>
         <p class="text-sm text-muted text-center mt-2">
           New here? <a href="#" onclick="pTab('register');return false;" class="font-semibold" style="color:var(--brand-dark)">Register your restaurant</a>
         </p>
       </div>
-      <!-- REGISTER -->
+
+      <!-- REGISTER PANE -->
       <div id="pane-register" class="space-y-3 hidden">
         <p class="text-xs font-bold" style="color:var(--brand-dark)">YOUR RESTAURANT</p>
         <input id="rg-rname" class="input" placeholder="Restaurant name *">
@@ -66,7 +68,12 @@
           <input id="rg-phone" class="input" placeholder="Mobile (optional)" inputmode="numeric" maxlength="10">
           <input id="rg-email" type="email" class="input" placeholder="Email *">
         </div>
-        <div class="relative"><input id="rg-pass" type="password" class="input pr-11" placeholder="Password (min 6 chars) *"><button type="button" onclick="togglePw('rg-pass', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+        <div class="relative">
+          <input id="rg-pass" type="password" class="input pr-11" placeholder="Password (min 6 chars) *">
+          <button type="button" onclick="togglePw('rg-pass', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         <p id="p-err" class="text-sm hidden" style="color:var(--danger)"></p>
         <button class="btn-brand w-full" onclick="partnerRegister()">Register My Restaurant</button>
         <p class="text-xs text-muted text-center">Your restaurant goes live after a quick admin approval. You can add your menu right away!</p>
@@ -77,8 +84,9 @@
     </div>
   </div>
 
-  <!-- ============ PANEL VIEW ============ -->
+  <!-- ==================== PANEL VIEW ==================== -->
   <div id="panel-view" class="hidden">
+    <!-- Restaurant header -->
     <div class="surface rounded-2xl p-5 mb-5 flex items-center justify-between flex-wrap gap-3" style="box-shadow:var(--shadow)">
       <div>
         <h1 id="r-name" class="font-display font-bold text-xl">—</h1>
@@ -90,123 +98,143 @@
       </div>
     </div>
 
-    <div id="pending-banner" class="hidden rounded-2xl p-4 mb-5 text-sm font-medium" style="background:#fef3c7;color:#92400e;box-shadow:var(--shadow)">
-      ⏳ Your restaurant is <b>pending approval</b> — it's hidden from customers for now. Add your menu and delivery boys below; you'll go live after a quick review!
-    </div>
+    <!-- Status banner (pending/suspended) -->
+    <div id="pending-banner" class="hidden rounded-2xl p-4 mb-5 text-sm font-medium" style="background:#fef3c7;color:#92400e"></div>
 
+    <!-- Stats -->
     <div class="grid grid-cols-3 gap-3 mb-6">
       <div class="surface rounded-2xl p-4 text-center" style="box-shadow:var(--shadow)">
-        <p id="st-new" class="font-display font-bold text-2xl" style="color:var(--brand-dark)">0</p>
-        <p class="text-xs text-muted font-medium">New orders</p>
+        <p id="st-new" class="font-display font-bold text-2xl" style="color:var(--brand)">0</p>
+        <p class="text-xs text-muted">New Orders</p>
       </div>
       <div class="surface rounded-2xl p-4 text-center" style="box-shadow:var(--shadow)">
-        <p id="st-prep" class="font-display font-bold text-2xl">0</p>
-        <p class="text-xs text-muted font-medium">Preparing</p>
+        <p id="st-prep" class="font-display font-bold text-2xl" style="color:var(--brand)">0</p>
+        <p class="text-xs text-muted">Preparing</p>
       </div>
       <div class="surface rounded-2xl p-4 text-center" style="box-shadow:var(--shadow)">
-        <p id="st-today" class="font-display font-bold text-2xl">0</p>
-        <p class="text-xs text-muted font-medium">Orders today</p>
+        <p id="st-today" class="font-display font-bold text-2xl" style="color:var(--brand)">0</p>
+        <p class="text-xs text-muted">Today</p>
       </div>
     </div>
 
+    <!-- New orders -->
+    <h2 class="font-display font-bold text-lg mb-3">🔔 New Orders</h2>
+    <div id="sec-new" class="space-y-3 mb-6"><p class="text-sm text-muted">No new orders.</p></div>
+
+    <!-- Preparing -->
+    <h2 class="font-display font-bold text-lg mb-3">👨‍🍳 Preparing</h2>
+    <div id="sec-prep" class="space-y-3 mb-6"><p class="text-sm text-muted">Nothing being prepared.</p></div>
+
+    <!-- On the way -->
+    <h2 class="font-display font-bold text-lg mb-3">🛵 On the Way</h2>
+    <div id="sec-way" class="space-y-3 mb-6"><p class="text-sm text-muted">No deliveries in progress.</p></div>
+
+    <!-- My Menu -->
     <div class="flex items-center justify-between mb-3">
       <h2 class="font-display font-bold text-lg">🍽️ My Menu</h2>
-      <button class="btn-brand !py-2 !px-4 text-sm" onclick="openDishModal()">+ Add Dish</button>
+      <button class="text-sm font-bold px-4 py-2 rounded-xl text-white" style="background:var(--brand)" onclick="openDishModal()">+ Add Dish</button>
     </div>
-    <div id="sec-menu" class="space-y-2 mb-8"></div>
+    <div id="sec-menu" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6"><p class="text-sm text-muted">Loading menu…</p></div>
 
+    <!-- Delivery boys -->
     <h2 class="font-display font-bold text-lg mb-3">🛵 Delivery Boys</h2>
     <div class="surface rounded-2xl p-4 mb-3" style="box-shadow:var(--shadow)">
-      <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-        <input id="r-name" class="input" placeholder="Name *">
-        <input id="r-phone" class="input" placeholder="10-digit mobile *" inputmode="numeric" maxlength="10">
-        <div class="relative"><input id="r-pass" type="password" class="input pr-11" placeholder="Password *"><button type="button" onclick="togglePw('r-pass', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <input id="rider-name" class="input" placeholder="Name *">
+        <input id="rider-phone" class="input" placeholder="10-digit mobile *" inputmode="numeric" maxlength="10">
+        <input id="rider-pass" type="password" class="input" placeholder="Password *">
         <button class="btn-brand" onclick="addRider()">+ Add</button>
       </div>
-      <p class="text-xs text-muted mt-2">Riders log in at <span class="font-medium">rider.html</span> with their mobile number + password.</p>
+      <p id="rider-err" class="text-sm hidden mt-2" style="color:var(--danger)"></p>
     </div>
-    <div id="sec-riders" class="space-y-2 mb-8"></div>
+    <div id="sec-riders" class="space-y-2 mb-6"><p class="text-sm text-muted">No delivery boys added.</p></div>
 
-    <h2 class="font-display font-bold text-lg mb-3">🔔 New Orders <span class="text-xs font-medium text-muted">(needs accept / reject)</span></h2>
-    <div id="sec-new" class="space-y-3 mb-8"></div>
-
-    <h2 class="font-display font-bold text-lg mb-3">🍳 Preparing</h2>
-    <div id="sec-prep" class="space-y-3 mb-8"></div>
-
-    <h2 class="font-display font-bold text-lg mb-3">🛵 On the Way</h2>
-    <div id="sec-way" class="space-y-3 mb-8"></div>
-
-    <h2 class="font-display font-bold text-lg mb-3">📋 Today's History</h2>
-    <div id="sec-hist" class="space-y-3 mb-8"></div>
+    <!-- History -->
+    <h2 class="font-display font-bold text-lg mb-3">📋 History</h2>
+    <div id="sec-history" class="space-y-3 mb-6"><p class="text-sm text-muted">No past orders.</p></div>
   </div>
-
 </main>
 
-<!-- Add/Edit dish modal -->
-<div id="dish-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-  <div class="absolute inset-0 bg-black/50" onclick="closeDishModal()"></div>
-  <div class="surface rounded-2xl p-6 w-full max-w-md relative" style="box-shadow:var(--shadow)">
+<!-- Dish modal -->
+<div id="dish-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.5)">
+  <div class="surface rounded-2xl p-6 w-full max-w-md" style="box-shadow:var(--shadow)">
     <h3 id="dish-modal-title" class="font-display font-bold text-lg mb-4">Add Dish</h3>
-    <input type="hidden" id="d-id">
     <div class="space-y-3">
-      <input id="d-name" class="input" placeholder="Dish name *">
-      <textarea id="d-desc" class="input" rows="2" placeholder="Description"></textarea>
+      <input id="dish-name" class="input" placeholder="Dish name *">
       <div class="grid grid-cols-2 gap-3">
-        <input id="d-price" type="number" class="input" placeholder="Price (₹) *" min="0">
-        <input id="d-category" class="input" placeholder="Category * (e.g. Biryani)">
+        <input id="dish-price" type="number" class="input" placeholder="Price ₹ *">
+        <select id="dish-veg" class="input"><option value="true">Veg</option><option value="false">Non-veg</option></select>
       </div>
-      <input id="d-image" class="input" placeholder="Photo URL (optional)">
-      <div>
-        <label class="text-sm font-medium block mb-1">Or upload a photo</label>
-        <input id="d-photo" type="file" accept="image/*" class="input">
-      </div>
-      <label class="flex items-center gap-2 text-sm font-medium">
-        <input id="d-veg" type="checkbox" checked class="w-4 h-4"> Veg dish
-      </label>
+      <input id="dish-cat" class="input" placeholder="Category (e.g. Biryani)">
+      <textarea id="dish-desc" class="input" rows="2" placeholder="Description (optional)"></textarea>
+      <input id="dish-img" type="file" accept="image/*" class="input text-sm">
+      <p class="text-xs text-muted">Or image URL:</p>
+      <input id="dish-imgurl" class="input" placeholder="https://…">
     </div>
-    <div class="flex gap-3 mt-5">
+    <div class="flex gap-2 mt-4">
       <button class="btn-brand flex-1" onclick="saveDish()">Save</button>
-      <button class="px-4 py-2 rounded-xl surface font-semibold text-sm hover:opacity-70" onclick="closeDishModal()">Cancel</button>
+      <button class="flex-1 py-2.5 rounded-xl surface font-bold text-sm hover:opacity-70" onclick="closeDishModal()">Cancel</button>
     </div>
   </div>
 </div>
 
+<div id="toast-wrap" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
 <script src="js/api.js"></script>
 <script src="js/common.js"></script>
 <script>
-/* ============================================================
-   FoodHub Restaurant Partner Panel
-   Separate login (fh_partner_token) so it never clashes with
-   a customer session in the same browser.
-   ============================================================ */
+/* =====================================================================
+   FOODHUB RESTAURANT PARTNER PANEL
+   Clean rebuild — all features, properly connected to /api/partner/*
+   ===================================================================== */
+
+// ---------- Constants & state ----------
 const P_TOKEN = "fh_partner_token";
 const P_USER = "fh_partner";
 let RESTAURANT_ID = null;
 let socket = null;
 let pollTimer = null;
+let editingDishId = null;
+window.__riders = [];
+window.__riderSel = {}; // preserve rider dropdown selections across refreshes
 
+// ---------- UI helpers ----------
 function perr(msg) {
-  const el = document.getElementById("p-err");
-  el.textContent = msg;
-  el.classList.remove("hidden");
+  const e = document.getElementById("p-err");
+  if (!e) return;
+  if (!msg) { e.classList.add("hidden"); return; }
+  e.textContent = msg;
+  e.classList.remove("hidden");
+}
+function toast(msg, type) {
+  const w = document.getElementById("toast-wrap");
+  const d = document.createElement("div");
+  d.className = "px-4 py-2.5 rounded-xl text-sm font-medium text-white shadow-lg";
+  d.style.background = type === "success" ? "#16a34a" : type === "error" ? "#dc2626" : "#333";
+  d.textContent = msg;
+  w.appendChild(d);
+  setTimeout(() => d.remove(), 3000);
 }
 
-/** authed fetch with the PARTNER token (401 -> back to login view).
- * Falls back to the main login token: a partner who logged in via login.html
- * is routed here by role, and the backend's restaurantOnly middleware
- * enforces the role, so a customer token can never access partner data. */
+// ---------- Token management ----------
+// Partner may arrive via partner.html login (P_TOKEN) or via login.html (fh_token).
+// pToken() prefers the panel token, falls back to the main session token.
 function pToken() {
   return localStorage.getItem(P_TOKEN) || localStorage.getItem("fh_token");
 }
-/** Try each available session token until one is accepted — a stale saved
- * token must never shadow a fresh valid one. */
-async function pFetch(path, { method = "GET", body = null } = {}) {
+
+// ---------- API helper with token retry ----------
+// Tries every available token until one is accepted (401/403 → try next).
+// This makes a stale saved token unable to shadow a fresh valid one.
+async function pFetch(path, { method = "GET", body = null, form = null } = {}) {
   const tokens = [...new Set([localStorage.getItem("fh_token"), localStorage.getItem(P_TOKEN)].filter(Boolean))];
   for (const token of tokens.length ? tokens : [null]) {
-    const headers = { "Content-Type": "application/json" };
+    const headers = {};
+    if (!form) headers["Content-Type"] = "application/json";
     if (token) headers["Authorization"] = "Bearer " + token;
     const res = await fetch(API_BASE + path, {
-      method, headers, body: body ? JSON.stringify(body) : undefined,
+      method, headers,
+      body: form ? form : (body ? JSON.stringify(body) : undefined),
     });
     if (res.status === 401 || res.status === 403) continue; // try the next token
     const data = await res.json().catch(() => ({}));
@@ -217,434 +245,7 @@ async function pFetch(path, { method = "GET", body = null } = {}) {
   throw new Error("unauthorized");
 }
 
-/** confirm partner login, then load panel */
-
-
-function rgerr(msg) { perr(msg); }
-
-/** Register a new restaurant + owner account (public endpoint) */
-async function partnerRegister() {
-  const body = {
-    restaurantName: document.getElementById("rg-rname").value.trim(),
-    cuisine: document.getElementById("rg-cuisine").value.trim(),
-    city: document.getElementById("rg-city").value,
-    area: document.getElementById("rg-area").value.trim(),
-    address: document.getElementById("rg-address").value.trim(),
-    ownerName: document.getElementById("rg-oname").value.trim(),
-    phone: document.getElementById("rg-phone").value.trim(),
-    email: document.getElementById("rg-email").value.trim(),
-    password: document.getElementById("rg-pass").value,
-  };
-  if (!body.restaurantName || !body.cuisine || !body.area || !body.ownerName || !body.email || !body.password)
-    return rgerr("Please fill all required (*) fields.");
-  try {
-    const res = await fetch(API_BASE + "/partner/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return rgerr(data.message || "Registration failed.");
-    localStorage.setItem(P_TOKEN, data.token);
-    localStorage.setItem(P_USER, JSON.stringify(data.user));
-    enterPanel();
-    toast("Welcome aboard! 🎉 Add your menu while we review your restaurant.", "success");
-  } catch (e) {
-    rgerr("Could not reach the server. Is the backend running?");
-  }
-}
-
-
-function partnerLogout() {
-  try {
-    const t = pToken();
-    if (t && typeof API_BASE !== "undefined") {
-      fetch(API_BASE + "/auth/logout", {
-        method: "POST",
-        headers: { Authorization: "Bearer " + t },
-        keepalive: true,
-      }).catch(() => {});
-    }
-  } catch (e) {}
-  localStorage.removeItem(P_TOKEN);
-  localStorage.removeItem(P_USER);
-  // also clear the main session: the panel may have been entered with it
-  localStorage.removeItem("fh_token");
-  localStorage.removeItem("fh_user");
-  if (socket) { socket.disconnect(); socket = null; }
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-  showLogin("");
-}
-
-function showLogin(msg) {
-  document.getElementById("login-view").classList.remove("hidden");
-  document.getElementById("panel-view").classList.add("hidden");
-  if (msg) perr(msg);
-}
-
-async function enterPanel() {
-  try {
-    const me = await pFetch("/partner/me");
-    RESTAURANT_ID = me.restaurant._id;
-    document.getElementById("r-name").textContent = me.restaurant.name;
-    document.getElementById("r-sub").textContent =
-      (me.restaurant.area ? me.restaurant.area + ", " : "") + (me.restaurant.city || "");
-    document.getElementById("st-new").textContent = me.counts.placed;
-    document.getElementById("st-prep").textContent = me.counts.preparing;
-    document.getElementById("st-today").textContent = me.counts.today;
-    document.getElementById("login-view").classList.add("hidden");
-    document.getElementById("panel-view").classList.remove("hidden");
-    const _st = me.restaurant.status || "active";
-    const _banner = document.getElementById("pending-banner");
-    if (_st === "suspended") {
-      _banner.style.background = "#fee2e2";
-      _banner.style.color = "#991b1b";
-      _banner.innerHTML = "⛔ Your restaurant has been <b>suspended by the admin</b> — it's hidden from customers right now. Please contact support.";
-      _banner.classList.remove("hidden");
-    } else {
-      _banner.classList.toggle("hidden", _st !== "pending");
-    }
-    loadMenu();
-    await loadRiders();
-    await loadOrders();
-    connectSocket();
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(() => loadOrders(true), 15000); // fallback if socket drops
-  } catch (e) {
-    if (e.message !== "unauthorized") perr("Could not load partner data.");
-  }
-}
-
-/* ---------- order list ---------- */
-
-function timeAgo(iso) {
-  const mins = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
-  if (mins < 1) return "just now";
-  if (mins < 60) return mins + " min ago";
-  return Math.floor(mins / 60) + "h " + (mins % 60) + "m ago";
-}
-
-function orderCard(o) {
-  const items = o.items.map((it) => `${it.qty}× ${esc(it.name)}`).join(", ");
-  const cust = (o.user && o.user.name) ? esc(o.user.name) : "Guest";
-  const custPhone = (o.user && o.user.phone) ? ` <span class="text-xs text-muted font-mono">📞 ${esc(o.user.phone)}</span>` : "";
-  const idShort = String(o._id).slice(-6).toUpperCase();
-  const when = timeAgo(o.createdAt) + " · " +
-    new Date(o.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-  let actions = "";
-  if (o.status === "placed") {
-    actions = `<div class="flex gap-2 mt-3">
-      <button onclick="act('${o._id}','accept')" class="flex-1 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700">✓ Accept</button>
-      <button onclick="act('${o._id}','reject')" class="flex-1 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600">✕ Reject</button>
-    </div>`;
-  } else if (o.status === "preparing") {
-    actions = `<button onclick="act('${o._id}','ready')" class="w-full mt-3 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600">🍳 Mark Ready — Out for Delivery</button>`;
-  } else if (o.status === "on_the_way") {
-    const riders = window.__riders || [];
-    const assigned = o.assignedRider;
-    let assignBox;
-    if (!riders.length) {
-      assignBox = `<p class="text-xs mt-3 text-muted">Add a delivery boy above to assign this order.</p>`;
-    } else {
-      const opts = riders.map(r =>
-        `<option value="${r._id}"${assigned && String(assigned._id) === String(r._id) ? " selected" : ""}>${esc(r.name)} (${esc(r.phone)})</option>`
-      ).join("");
-      assignBox = `<div class="flex gap-2 mt-3">
-          <select id="rider-${o._id}" class="input !py-2 text-sm flex-1">
-            <option value="">— Select rider —</option>${opts}
-          </select>
-          <button onclick="assignRider('${o._id}')" class="text-sm font-bold px-4 py-2 rounded-xl text-white shrink-0" style="background:var(--brand)">Assign</button>
-        </div>
-        ${assigned
-          ? `<p class="text-xs mt-1 font-bold" style="color:var(--brand-dark)">🛵 ${esc(assigned.name)} (${esc(assigned.phone)})</p>`
-          : `<p class="text-xs mt-1 text-muted">No rider assigned yet</p>`}`;
-    }
-    actions = assignBox + `<button onclick="act('${o._id}','delivered')" class="w-full mt-3 text-white text-sm font-bold px-4 py-2.5 rounded-xl" style="background:var(--brand)">✅ Mark Delivered</button>`;
-  }
-  const statusPill = o.status === "cancelled"
-    ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">CANCELLED</span>`
-    : o.status === "delivered"
-    ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">DELIVERED</span>`
-    : "";
-  return `<div class="surface rounded-2xl p-4" style="box-shadow:var(--shadow)">
-    <div class="flex items-center justify-between mb-1">
-      <p class="font-bold">#${idShort} <span class="text-xs font-medium text-muted">· ${when}</span></p>
-      ${statusPill}
-    </div>
-    <p class="text-sm font-medium">👤 ${cust}${custPhone}</p>
-    <p class="text-sm text-muted mt-1">${esc(items)}</p>
-    <p class="text-sm text-muted">📍 ${esc(o.address || "")}</p>
-    <p class="font-bold mt-2" style="color:var(--brand-dark)">${inr(o.total)} <span class="text-xs font-medium text-muted">· ${o.paymentMethod === "cod" ? "Cash on Delivery" : esc(o.paymentMethod)}</span></p>
-    ${actions}
-  </div>`;
-}
-
-const emptyBox = (msg) =>
-  `<div class="surface rounded-2xl p-6 text-center text-sm text-muted">${msg}</div>`;
-
-async function loadOrders(silent) {
-  // Preserve rider-dropdown selections across auto-refreshes (poll/socket),
-  // so a partner mid-selection doesn't lose their pick every 15 seconds.
-  const selCache = {};
-  document.querySelectorAll('select[id^="rider-"]').forEach(s => { selCache[s.id] = s.value; });
-  try {
-    const orders = await pFetch("/partner/orders");
-    const by = (s) => orders.filter((o) => o.status === s);
-    const placed = by("placed"), prep = by("preparing"), way = by("on_the_way");
-    const hist = orders.filter((o) => o.status === "delivered" || o.status === "cancelled").slice(0, 20);
-    document.getElementById("sec-new").innerHTML =
-      placed.length ? placed.map(orderCard).join("") : emptyBox("No new orders — you're all caught up! 🎉");
-    document.getElementById("sec-prep").innerHTML =
-      prep.length ? prep.map(orderCard).join("") : emptyBox("Nothing cooking right now.");
-    document.getElementById("sec-way").innerHTML =
-      way.length ? way.map(orderCard).join("") : emptyBox("No riders out right now.");
-    document.getElementById("sec-hist").innerHTML =
-      hist.length ? hist.map(orderCard).join("") : emptyBox("No completed orders today yet.");
-    document.getElementById("st-new").textContent = placed.length;
-    document.getElementById("st-prep").textContent = prep.length;
-    // restore selections
-    Object.entries(selCache).forEach(([id, val]) => {
-      const el = document.getElementById(id);
-      if (el && val) el.value = val;
-    });
-  } catch (e) {
-    if (!silent && e.message !== "unauthorized") toast("Could not refresh orders.", "error");
-  }
-}
-
-async function act(id, action) {
-  const labels = { accept: "Accept", reject: "Reject", ready: "mark ready", delivered: "mark delivered" };
-  if (action === "reject" && !confirm("Reject this order? The customer will be notified.")) return;
-  try {
-    await pFetch(`/partner/orders/${id}/${action}`, { method: "PATCH" });
-    toast(`Order ${labels[action]}ed.`, "success");
-    loadOrders();
-  } catch (e) {
-    toast(e.message || "Action failed.", "error");
-  }
-}
-
-/* ---------- menu management ---------- */
-
-async function loadMenu() {
-  const wrap = document.getElementById("sec-menu");
-  if (!wrap) return;
-  wrap.innerHTML = `<p class="text-sm text-muted">Loading menu…</p>`;
-  try {
-    const menu = await pFetch("/partner/menu");
-    window.__pmenu = menu;
-    if (!menu.length) {
-      wrap.innerHTML = emptyBox("No dishes yet — add your first one! 🍽️");
-      return;
-    }
-    wrap.innerHTML = menu.map(m => {
-      const id = JSON.stringify(String(m._id));
-      const availBtn = m.isAvailable
-        ? `<button class="text-xs font-bold px-2 py-1 rounded-lg whitespace-nowrap" style="background:#dcfce7;color:#166534" onclick='toggleAvail(${id})' title="Tap to mark unavailable">● Available</button>`
-        : `<button class="text-xs font-bold px-2 py-1 rounded-lg whitespace-nowrap" style="background:#fee2e2;color:#991b1b" onclick='toggleAvail(${id})' title="Tap to mark available">● Unavailable</button>`;
-      const img = m.image
-        ? `<img src="${esc(m.image)}" class="w-12 h-12 rounded-xl object-cover shrink-0" loading="lazy" onerror="this.style.display='none'">`
-        : "";
-      return `<div class="surface rounded-xl p-2 flex items-center gap-3" style="${m.isAvailable ? "" : "opacity:.55"}">
-        ${img}
-        <div class="flex-1 min-w-0">
-          <p class="font-medium text-sm truncate">${esc(m.name)} ${m.veg ? "🟢" : "🔴"}</p>
-          <p class="text-xs text-muted">${esc(m.category || "")} • ${inr(m.price)}</p>
-        </div>
-        ${availBtn}
-        <button class="text-sm font-semibold px-3 py-1 rounded-lg surface hover:opacity-80" onclick='openDishModal(${id})'>Edit</button>
-        <button class="text-sm font-semibold px-3 py-1 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick='deleteDish(${id})'>Delete</button>
-      </div>`;
-    }).join("");
-  } catch (e) {
-    if (e.message !== "unauthorized") wrap.innerHTML = `<p class="text-sm" style="color:var(--danger)">${esc(e.message)}</p>`;
-  }
-}
-
-function openDishModal(id) {
-  document.getElementById("dish-modal").classList.remove("hidden");
-  const m = id ? (window.__pmenu || []).find(x => String(x._id) === String(id)) : null;
-  document.getElementById("dish-modal-title").textContent = m ? "Edit Dish" : "Add Dish";
-  document.getElementById("d-id").value = m ? m._id : "";
-  document.getElementById("d-name").value = m ? m.name : "";
-  document.getElementById("d-desc").value = m ? (m.description || "") : "";
-  document.getElementById("d-price").value = m ? m.price : "";
-  document.getElementById("d-category").value = m ? (m.category || "") : "";
-  document.getElementById("d-image").value = m ? (m.image || "") : "";
-  document.getElementById("d-veg").checked = m ? !!m.veg : true;
-  document.getElementById("d-photo").value = "";
-}
-
-function closeDishModal() {
-  document.getElementById("dish-modal").classList.add("hidden");
-}
-
-/**
- * POST /partner/menu (add) or PUT /partner/menu/:id (edit).
- * Backend uses multer ("image" file field), so we send FormData —
- * never set Content-Type manually, the browser adds the boundary.
- */
-async function saveDish() {
-  const id = document.getElementById("d-id").value;
-  const name = document.getElementById("d-name").value.trim();
-  const price = document.getElementById("d-price").value;
-  const category = document.getElementById("d-category").value.trim();
-  if (!name || !price || !category) { toast("Name, price and category are required.", "error"); return; }
-
-  const fd = new FormData();
-  fd.append("name", name);
-  fd.append("description", document.getElementById("d-desc").value.trim());
-  fd.append("price", price);
-  fd.append("category", category);
-  fd.append("image", document.getElementById("d-image").value.trim());
-  fd.append("veg", document.getElementById("d-veg").checked ? "true" : "false");
-  const photo = document.getElementById("d-photo").files[0];
-  if (photo) fd.append("image", photo); // multer picks up the file
-
-  try {
-    const res = await fetch(API_BASE + (id ? "/partner/menu/" + id : "/partner/menu"), {
-      method: id ? "PUT" : "POST",
-      headers: { "Authorization": "Bearer " + localStorage.getItem(P_TOKEN) },
-      body: fd,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || "Save failed");
-    toast("Dish saved! 🎉", "success");
-    closeDishModal();
-    loadMenu();
-  } catch (e) {
-    toast(e.message, "error");
-  }
-}
-
-async function deleteDish(id) {
-  if (!confirm("Delete this dish permanently?")) return;
-  try {
-    await pFetch("/partner/menu/" + id, { method: "DELETE" });
-    toast("Dish deleted.", "success");
-    loadMenu();
-  } catch (e) {
-    if (e.message !== "unauthorized") toast(e.message, "error");
-  }
-}
-
-async function toggleAvail(id) {
-  try {
-    await pFetch("/partner/menu/" + id + "/availability", { method: "PATCH" });
-    loadMenu();
-  } catch (e) {
-    if (e.message !== "unauthorized") toast(e.message, "error");
-  }
-}
-
-/* ---------- delivery boys ---------- */
-
-async function loadRiders() {
-  const wrap = document.getElementById("sec-riders");
-  if (!wrap) return;
-  try {
-    const riders = await pFetch("/partner/riders");
-    window.__riders = riders;
-    wrap.innerHTML = riders.length ? riders.map(r => `
-      <div class="surface rounded-xl p-3 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style="background:#ffedd5">🛵</div>
-        <div class="flex-1 min-w-0">
-          <p class="font-medium text-sm">${esc(r.name)}</p>
-          <p class="text-xs text-muted font-mono">${esc(r.phone)}${r.activeDeliveries ? ` · <span class="font-bold" style="color:var(--brand-dark)">${r.activeDeliveries} active</span>` : ""}</p>
-        </div>
-        <button class="text-sm font-semibold px-3 py-1 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick="deleteRider('${r._id}')">Remove</button>
-      </div>`).join("")
-      : `<p class="text-sm text-muted">No delivery boys yet — add your first rider above.</p>`;
-  } catch (e) {
-    if (e.message !== "unauthorized") wrap.innerHTML = `<p class="text-sm" style="color:var(--danger)">${esc(e.message)}</p>`;
-  }
-}
-
-async function addRider() {
-  const name = document.getElementById("r-name").value.trim();
-  const phone = document.getElementById("r-phone").value.trim();
-  const password = document.getElementById("r-pass").value;
-  if (!name || !phone || !password) { toast("Name, mobile and password are required.", "error"); return; }
-  try {
-    await pFetch("/partner/riders", { method: "POST", body: { name, phone, password } });
-    toast("Delivery boy added! 🛵", "success");
-    document.getElementById("r-name").value = "";
-    document.getElementById("r-phone").value = "";
-    document.getElementById("r-pass").value = "";
-    await loadRiders();
-    loadOrders(true);
-  } catch (e) {
-    if (e.message !== "unauthorized") toast(e.message, "error");
-  }
-}
-
-async function deleteRider(id) {
-  if (!confirm("Remove this delivery boy?")) return;
-  try {
-    await pFetch("/partner/riders/" + id, { method: "DELETE" });
-    toast("Delivery boy removed.", "success");
-    await loadRiders();
-    loadOrders(true);
-  } catch (e) {
-    if (e.message !== "unauthorized") toast(e.message, "error");
-  }
-}
-
-async function assignRider(orderId) {
-  const sel = document.getElementById("rider-" + orderId);
-  const riderId = sel ? sel.value : "";
-  if (!riderId) { toast("Select a delivery boy first.", "error"); return; }
-  try {
-    await pFetch("/partner/orders/" + orderId + "/assign", { method: "PATCH", body: { riderId } });
-    toast("Rider assigned! 🛵", "success");
-    loadOrders();
-  } catch (e) {
-    if (e.message !== "unauthorized") toast(e.message, "error");
-  }
-}
-
-/* ---------- real-time ---------- */
-
-let audioCtx = null;
-function beep() {
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    [523, 659, 784].forEach((f, i) => {
-      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.connect(g); g.connect(audioCtx.destination);
-      o.frequency.value = f; o.type = "sine";
-      const t = audioCtx.currentTime + i * 0.18;
-      g.gain.setValueAtTime(0.001, t);
-      g.gain.exponentialRampToValueAtTime(0.5, t + 0.03);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
-      o.start(t); o.stop(t + 0.18);
-    });
-  } catch (e) { /* audio not available — visual alert still works */ }
-}
-
-function connectSocket() {
-  try {
-    if (socket) socket.disconnect();
-    socket = io(API_ORIGIN, { transports: ["websocket", "polling"] });
-    socket.emit("join-restaurant", RESTAURANT_ID);
-    socket.on("new-order", () => {
-      beep();
-      toast("🔔 New order received!", "success");
-      loadOrders();
-    });
-    socket.on("order-status", () => loadOrders(true)); // e.g. admin changed a status
-    socket.on("connect", () => {
-      const d = document.getElementById("live-dot");
-      if (d) { d.textContent = "● LIVE"; d.style.background = "#dcfce7"; d.style.color = "#166534"; }
-    });
-    socket.on("disconnect", () => {
-      const d = document.getElementById("live-dot");
-      if (d) { d.textContent = "● POLLING"; d.style.background = "#fef3c7"; d.style.color = "#92400e"; }
-    });
-  } catch (e) { /* polling fallback keeps it working */ }
-}
-
-/* ---------- Login / Register tabs ---------- */
+// ---------- Tabs ----------
 function pTab(which) {
   const isLogin = which === "login";
   document.getElementById("pane-login").classList.toggle("hidden", !isLogin);
@@ -661,7 +262,7 @@ function pTab(which) {
   tr.classList.toggle("text-muted", isLogin);
 }
 
-/** Partner login (right here on partner.html, like before). */
+// ---------- Auth ----------
 async function partnerLogin() {
   const email = document.getElementById("p-email").value.trim();
   const password = document.getElementById("p-password").value;
@@ -673,7 +274,7 @@ async function partnerLogin() {
     return;
   }
   try {
-    const user = await login(email, password); // saves fh_token + fh_user
+    const user = await login(email, password); // from auth.js — saves fh_token + fh_user
     if (user.role !== "restaurant") {
       err.textContent = "This account is not a restaurant partner.";
       err.classList.remove("hidden");
@@ -686,7 +287,364 @@ async function partnerLogin() {
   }
 }
 
-/* ---------- boot ---------- */
+async function partnerRegister() {
+  perr(null);
+  const body = {
+    restaurantName: document.getElementById("rg-rname").value.trim(),
+    cuisine: document.getElementById("rg-cuisine").value.trim(),
+    city: document.getElementById("rg-city").value,
+    area: document.getElementById("rg-area").value.trim(),
+    address: document.getElementById("rg-address").value.trim(),
+    ownerName: document.getElementById("rg-oname").value.trim(),
+    phone: document.getElementById("rg-phone").value.trim(),
+    email: document.getElementById("rg-email").value.trim(),
+    password: document.getElementById("rg-pass").value,
+  };
+  if (!body.restaurantName || !body.cuisine || !body.area || !body.ownerName || !body.email || !body.password) {
+    perr("Please fill all required (*) fields.");
+    return;
+  }
+  try {
+    const res = await fetch(API_BASE + "/partner/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Registration failed");
+    localStorage.setItem("fh_token", data.token);
+    localStorage.setItem("fh_user", JSON.stringify(data.user));
+    toast("Registered! Your restaurant is pending approval.", "success");
+    enterPanel();
+  } catch (e) {
+    perr(e.message);
+  }
+}
+
+function partnerLogout() {
+  localStorage.removeItem(P_TOKEN);
+  localStorage.removeItem(P_USER);
+  localStorage.removeItem("fh_token");
+  localStorage.removeItem("fh_user");
+  if (socket) { socket.disconnect(); socket = null; }
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  showLogin("");
+}
+
+function showLogin(msg) {
+  document.getElementById("login-view").classList.remove("hidden");
+  document.getElementById("panel-view").classList.add("hidden");
+  if (msg) perr(msg);
+}
+
+// ---------- Panel boot ----------
+async function enterPanel() {
+  try {
+    const me = await pFetch("/partner/me");
+    if (!me.restaurant) throw new Error("No restaurant linked to this account.");
+    RESTAURANT_ID = me.restaurant._id;
+    document.getElementById("r-name").textContent = me.restaurant.name;
+    document.getElementById("r-sub").textContent =
+      (me.restaurant.area ? me.restaurant.area + ", " : "") + (me.restaurant.city || "");
+    document.getElementById("st-new").textContent = me.counts.placed;
+    document.getElementById("st-prep").textContent = me.counts.preparing;
+    document.getElementById("st-today").textContent = me.counts.today;
+    document.getElementById("login-view").classList.add("hidden");
+    document.getElementById("panel-view").classList.remove("hidden");
+
+    // Status banner
+    const st = me.restaurant.status || "active";
+    const banner = document.getElementById("pending-banner");
+    if (st === "suspended") {
+      banner.style.background = "#fee2e2";
+      banner.style.color = "#991b1b";
+      banner.innerHTML = "⛔ Your restaurant has been <b>suspended by the admin</b> — it's hidden from customers right now. Please contact support.";
+      banner.classList.remove("hidden");
+    } else if (st === "pending") {
+      banner.style.background = "#fef3c7";
+      banner.style.color = "#92400e";
+      banner.innerHTML = "⏳ Your restaurant is <b>pending admin approval</b> — it's hidden from customers for now. You can set up your menu below!";
+      banner.classList.remove("hidden");
+    } else {
+      banner.classList.add("hidden");
+    }
+
+    loadMenu();
+    await loadRiders();
+    await loadOrders();
+    connectSocket();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => loadOrders(true), 15000);
+  } catch (e) {
+    if (e.message !== "unauthorized") perr("Could not load partner data.");
+  }
+}
+
+// ---------- Orders ----------
+function timeAgo(iso) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return s + "s ago";
+  if (s < 3600) return Math.floor(s / 60) + "m ago";
+  return Math.floor(s / 3600) + "h ago";
+}
+
+function orderCard(o) {
+  const items = (o.items || []).map(i => `${i.qty}× ${i.name}`).join(", ");
+  const cust = o.user ? (o.user.name || "") : "";
+  const phone = o.user && o.user.phone ? ` · 📞 ${o.user.phone}` : "";
+  const addr = o.address ? `<p class="text-xs text-muted mt-1">📍 ${o.address}</p>` : "";
+  let actions = "";
+  if (o.status === "placed") {
+    actions = `<div class="flex gap-2 mt-2">
+      <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-green-600" onclick="act('${o._id}','accept')">✓ Accept</button>
+      <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-red-600" onclick="act('${o._id}','reject')">✕ Reject</button>
+    </div>`;
+  } else if (o.status === "preparing") {
+    actions = `<button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white mt-2" style="background:var(--brand)" onclick="act('${o._id}','ready')">Mark Ready</button>`;
+  } else if (o.status === "on_the_way") {
+    const riders = window.__riders || [];
+    const sel = window.__riderSel[o._id] || "";
+    const opts = riders.map(r => `<option value="${r._id}" ${r._id === sel ? "selected" : ""}>${r.name} (${r.phone})</option>`).join("");
+    actions = `<div class="flex gap-2 mt-2 items-center flex-wrap">
+      <select class="input text-xs" style="max-width:180px" onchange="window.__riderSel['${o._id}']=this.value">
+        <option value="">Select rider…</option>${opts}
+      </select>
+      <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-blue-600" onclick="assignRider('${o._id}')">Assign</button>
+      <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white bg-green-600" onclick="act('${o._id}','delivered')">Mark Delivered</button>
+    </div>`;
+    if (o.assignedRider) {
+      actions += `<p class="text-xs text-muted mt-1">🛵 ${o.assignedRider.name || ""} ${o.assignedRider.phone ? "· " + o.assignedRider.phone : ""}</p>`;
+    }
+  }
+  return `<div class="surface rounded-2xl p-4" style="box-shadow:var(--shadow)">
+    <div class="flex justify-between items-start gap-2">
+      <div>
+        <p class="font-bold text-sm">#${String(o._id).slice(-6).toUpperCase()} · ₹${o.total}</p>
+        <p class="text-xs text-muted">${items}</p>
+        <p class="text-xs mt-1">👤 ${cust}${phone}</p>
+        ${addr}
+      </div>
+      <span class="text-xs text-muted whitespace-nowrap">${timeAgo(o.createdAt)}</span>
+    </div>${actions}
+  </div>`;
+}
+
+async function loadOrders(silent) {
+  try {
+    const orders = await pFetch("/partner/orders");
+    const secs = { "sec-new": [], "sec-prep": [], "sec-way": [], "sec-history": [] };
+    for (const o of orders) {
+      if (o.status === "placed") secs["sec-new"].push(o);
+      else if (o.status === "preparing") secs["sec-prep"].push(o);
+      else if (o.status === "on_the_way") secs["sec-way"].push(o);
+      else secs["sec-history"].push(o);
+    }
+    const empty = { "sec-new": "No new orders.", "sec-prep": "Nothing being prepared.", "sec-way": "No deliveries in progress.", "sec-history": "No past orders." };
+    for (const id of Object.keys(secs)) {
+      document.getElementById(id).innerHTML = secs[id].length
+        ? secs[id].map(orderCard).join("")
+        : `<p class="text-sm text-muted">${empty[id]}</p>`;
+    }
+    // Update stats
+    document.getElementById("st-new").textContent = secs["sec-new"].length;
+    document.getElementById("st-prep").textContent = secs["sec-prep"].length;
+  } catch (e) {
+    if (!silent && e.message !== "unauthorized") toast("Could not load orders.", "error");
+  }
+}
+
+async function act(id, action) {
+  try {
+    await pFetch(`/partner/orders/${id}/${action}`, { method: "PATCH" });
+    toast("Order updated.", "success");
+    loadOrders(true);
+  } catch (e) {
+    toast(e.message || "Action failed.", "error");
+  }
+}
+
+// ---------- Menu ----------
+async function loadMenu() {
+  try {
+    const items = await pFetch("/partner/menu");
+    document.getElementById("sec-menu").innerHTML = items.length ? items.map(m => `
+      <div class="surface rounded-2xl p-3 flex gap-3 items-center" style="box-shadow:var(--shadow)">
+        <img src="${m.image || ""}" onerror="this.style.display='none'" class="w-14 h-14 rounded-xl object-cover" alt="">
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-sm truncate">${m.name} ${m.isVeg ? "🟢" : "🔴"}</p>
+          <p class="text-xs text-muted">₹${m.price} ${m.available ? "" : "· ⛔ unavailable"}</p>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button class="text-xs font-bold px-2 py-1 rounded-lg surface hover:opacity-70" onclick="toggleAvail('${m._id}')">${m.available ? "Hide" : "Show"}</button>
+          <button class="text-xs font-bold px-2 py-1 rounded-lg surface hover:opacity-70" onclick="openDishModal('${m._id}')">Edit</button>
+          <button class="text-xs font-bold px-2 py-1 rounded-lg text-white bg-red-600" onclick="deleteDish('${m._id}')">Del</button>
+        </div>
+      </div>`).join("")
+      : `<p class="text-sm text-muted">No dishes yet — add your first dish!</p>`;
+    window.__menu = items;
+  } catch (e) {
+    document.getElementById("sec-menu").innerHTML = `<p class="text-sm text-muted">Could not load menu.</p>`;
+  }
+}
+
+function openDishModal(id) {
+  editingDishId = id || null;
+  document.getElementById("dish-modal-title").textContent = id ? "Edit Dish" : "Add Dish";
+  const m = id ? (window.__menu || []).find(x => x._id === id) : null;
+  document.getElementById("dish-name").value = m ? m.name : "";
+  document.getElementById("dish-price").value = m ? m.price : "";
+  document.getElementById("dish-veg").value = m ? String(!!m.isVeg) : "true";
+  document.getElementById("dish-cat").value = m ? (m.category || "") : "";
+  document.getElementById("dish-desc").value = m ? (m.description || "") : "";
+  document.getElementById("dish-imgurl").value = m && m.image && !m.image.startsWith("/uploads") ? m.image : "";
+  document.getElementById("dish-modal").classList.remove("hidden");
+}
+function closeDishModal() {
+  document.getElementById("dish-modal").classList.add("hidden");
+  editingDishId = null;
+}
+
+async function saveDish() {
+  const name = document.getElementById("dish-name").value.trim();
+  const price = parseFloat(document.getElementById("dish-price").value);
+  if (!name || !(price > 0)) { toast("Name and valid price required.", "error"); return; }
+  const form = new FormData();
+  form.append("name", name);
+  form.append("price", price);
+  form.append("isVeg", document.getElementById("dish-veg").value === "true");
+  form.append("category", document.getElementById("dish-cat").value.trim());
+  form.append("description", document.getElementById("dish-desc").value.trim());
+  const url = document.getElementById("dish-imgurl").value.trim();
+  if (url) form.append("imageUrl", url);
+  const file = document.getElementById("dish-img").files[0];
+  if (file) form.append("image", file);
+  try {
+    if (editingDishId) await pFetch(`/partner/menu/${editingDishId}`, { method: "PUT", form });
+    else await pFetch("/partner/menu", { method: "POST", form });
+    toast("Dish saved.", "success");
+    closeDishModal();
+    loadMenu();
+  } catch (e) {
+    toast(e.message || "Save failed.", "error");
+  }
+}
+
+async function deleteDish(id) {
+  if (!confirm("Delete this dish?")) return;
+  try {
+    await pFetch(`/partner/menu/${id}`, { method: "DELETE" });
+    toast("Dish deleted.", "success");
+    loadMenu();
+  } catch (e) {
+    toast(e.message || "Delete failed.", "error");
+  }
+}
+
+async function toggleAvail(id) {
+  try {
+    await pFetch(`/partner/menu/${id}/availability`, { method: "PATCH" });
+    loadMenu();
+  } catch (e) {
+    toast(e.message || "Failed.", "error");
+  }
+}
+
+// ---------- Delivery boys ----------
+async function loadRiders() {
+  try {
+    const riders = await pFetch("/partner/riders");
+    window.__riders = riders;
+    document.getElementById("sec-riders").innerHTML = riders.length ? riders.map(r => `
+      <div class="surface rounded-2xl px-4 py-2.5 flex justify-between items-center" style="box-shadow:var(--shadow)">
+        <p class="text-sm font-medium">🛵 ${r.name} <span class="text-muted">· ${r.phone}</span></p>
+        <button class="text-xs font-bold px-2 py-1 rounded-lg text-white bg-red-600" onclick="deleteRider('${r._id}')">Remove</button>
+      </div>`).join("")
+      : `<p class="text-sm text-muted">No delivery boys added.</p>`;
+  } catch (e) {
+    document.getElementById("sec-riders").innerHTML = `<p class="text-sm text-muted">Could not load riders.</p>`;
+  }
+}
+
+async function addRider() {
+  const err = document.getElementById("rider-err");
+  err.classList.add("hidden");
+  const name = document.getElementById("rider-name").value.trim();
+  const phone = document.getElementById("rider-phone").value.trim();
+  const password = document.getElementById("rider-pass").value;
+  if (!name || !/^[6-9]\d{9}$/.test(phone) || !password) {
+    err.textContent = "Enter name, valid 10-digit mobile, and password.";
+    err.classList.remove("hidden");
+    return;
+  }
+  try {
+    await pFetch("/partner/riders", { method: "POST", body: { name, phone, password } });
+    toast("Delivery boy added.", "success");
+    document.getElementById("rider-name").value = "";
+    document.getElementById("rider-phone").value = "";
+    document.getElementById("rider-pass").value = "";
+    loadRiders();
+  } catch (e) {
+    err.textContent = e.message || "Failed.";
+    err.classList.remove("hidden");
+  }
+}
+
+async function deleteRider(id) {
+  if (!confirm("Remove this delivery boy?")) return;
+  try {
+    await pFetch(`/partner/riders/${id}`, { method: "DELETE" });
+    toast("Removed.", "success");
+    loadRiders();
+  } catch (e) {
+    toast(e.message || "Failed.", "error");
+  }
+}
+
+async function assignRider(orderId) {
+  const riderId = window.__riderSel[orderId];
+  if (!riderId) { toast("Select a rider first.", "error"); return; }
+  try {
+    await pFetch(`/partner/orders/${orderId}/assign`, { method: "PATCH", body: { riderId } });
+    toast("Rider assigned.", "success");
+    loadOrders(true);
+  } catch (e) {
+    toast(e.message || "Assign failed.", "error");
+  }
+}
+
+// ---------- Real-time ----------
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    o.start();
+    o.stop(ctx.currentTime + 0.4);
+  } catch (e) {}
+}
+
+function connectSocket() {
+  try {
+    if (socket) socket.disconnect();
+    socket = io(API_BASE.replace("/api", ""), { transports: ["websocket", "polling"] });
+    socket.on("connect", () => {
+      if (RESTAURANT_ID) socket.emit("join-restaurant", RESTAURANT_ID);
+      const d = document.getElementById("live-dot");
+      if (d) { d.textContent = "● LIVE"; d.style.background = "#dcfce7"; d.style.color = "#166534"; }
+    });
+    socket.on("new-order", () => { beep(); toast("🔔 New order!", "success"); loadOrders(true); });
+    socket.on("order-status", () => loadOrders(true));
+    socket.on("disconnect", () => {
+      const d = document.getElementById("live-dot");
+      if (d) { d.textContent = "● POLLING"; d.style.background = "#fef3c7"; d.style.color = "#92400e"; }
+    });
+  } catch (e) { /* polling fallback keeps it working */ }
+}
+
+// ---------- Boot ----------
 initCommon();
 if (pToken()) enterPanel();
 </script>
