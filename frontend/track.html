@@ -90,13 +90,29 @@ function render(o) {
     const cls = i < currentIdx ? "done" : (i === currentIdx ? "active" : "");
     const ts = history[s.key] || (s.key === "placed" ? o.createdAt : null);
     let sub;
-    if (ts) sub = fmtTime(ts);
-    else if (i < currentIdx) sub = ""; // done but no timestamp recorded — show nothing, NOT "Pending"
-    else if (i === currentIdx) sub = (s.key === "delivered" ? "Completed 🎉" : "In progress…");
-    else sub = "Pending";
+    if (ts) {
+      sub = fmtTime(ts);
+    } else if (i < currentIdx) {
+      // Done steps: show meaningful label
+      if (s.key === "preparing") sub = "Prepared";
+      else if (s.key === "on_the_way") sub = "Picked up";
+      else sub = "";
+    } else if (i === currentIdx) {
+      if (s.key === "delivered") sub = "Delivered";
+      else if (s.key === "on_the_way") sub = "Coming soon…";
+      else sub = "In progress…";
+    } else {
+      sub = "Pending";
+    }
+    // Rider assignment info just above "On the way"
+    let extra = "";
+    if (s.key === "on_the_way" && o.assignedRider && i <= currentIdx) {
+      extra = `<p class="text-xs font-semibold" style="color:var(--brand)">🛵 Assigned to ${esc(o.assignedRider.name)}</p>`;
+    }
     return `<div class="timeline-step ${cls}">
       <div class="timeline-dot">${i < currentIdx ? "✓" : s.icon}</div>
       <p class="font-semibold">${s.label}</p>
+      ${extra}
       <p class="text-xs text-muted">${sub}</p>
     </div>`;
   }).join("");
