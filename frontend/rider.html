@@ -86,17 +86,23 @@ function derr(msg) {
 function rToken() {
   return localStorage.getItem(R_TOKEN) || localStorage.getItem("fh_token");
 }
+/** Try each available session token until one is accepted — a stale saved
+ * token must never shadow a fresh valid one. */
 async function rFetch(path, { method = "GET", body = null } = {}) {
-  const headers = { "Content-Type": "application/json" };
-  const token = rToken();
-  if (token) headers["Authorization"] = "Bearer " + token;
-  const res = await fetch(API_BASE + path, {
-    method, headers, body: body ? JSON.stringify(body) : undefined,
-  });
-  if (res.status === 401 || res.status === 403) { showLogin("Session expired — please log in again."); throw new Error("unauthorized"); }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || "Request failed");
-  return data;
+  const tokens = [...new Set([localStorage.getItem("fh_token"), localStorage.getItem(R_TOKEN)].filter(Boolean))];
+  for (const token of tokens.length ? tokens : [null]) {
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + path, {
+      method, headers, body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 401 || res.status === 403) continue; // try the next token
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Request failed");
+    return data;
+  }
+  showLogin("Session expired — please log in again.");
+  throw new Error("unauthorized");
 }
 
 async function riderLogin() {
