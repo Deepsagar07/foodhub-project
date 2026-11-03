@@ -57,4 +57,15 @@ function parseDevice(ua) {
   return os ? `${browser} · ${os}` : browser;
 }
 
-module.exports = { geoLookup, parseDevice };
+// "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ... Chrome/120.0 ..." -> "Chrome"
+function parseBrowser(ua) {
+  ua = String(ua || '');
+  if (/edg/i.test(ua)) return 'Edge';
+  if (/opr\//i.test(ua)) return 'Opera';
+  if (/firefox/i.test(ua)) return 'Firefox';
+  if (/chrome/i.test(ua)) return 'Chrome';
+  if (/safari/i.test(ua)) return 'Safari';
+  return 'Unknown';
+}
+
+module.exports = { geoLookup, parseDevice, parseBrowser };

@@ -86,19 +86,53 @@
     </div>
     <h2 class="font-display font-semibold mb-3">👥 Users</h2>
     <div class="overflow-x-auto">
-      <table class="w-full text-sm min-w-[760px]">
+      <table class="w-full text-sm min-w-[820px]">
         <thead>
           <tr class="text-left text-muted border-b" style="border-color:var(--border)">
             <th class="py-2 pr-3">User</th>
-            <th class="py-2 pr-3">Role</th>
             <th class="py-2 pr-3">Joined</th>
+            <th class="py-2 pr-3">Device</th>
             <th class="py-2 pr-3">Last login</th>
             <th class="py-2 pr-3">Logins</th>
-            <th class="py-2 pr-3">Last IP</th>
             <th class="py-2 pr-3">Orders</th>
+            <th class="py-2 pr-3"><span class="sr-only">History</span></th>
           </tr>
         </thead>
         <tbody id="users-body"></tbody>
+      </table>
+    </div>
+    <h2 class="font-display font-semibold mb-3 mt-8">🏪 Restaurant Partners</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[820px]">
+        <thead>
+          <tr class="text-left text-muted border-b" style="border-color:var(--border)">
+            <th class="py-2 pr-3">Partner</th>
+            <th class="py-2 pr-3">Joined</th>
+            <th class="py-2 pr-3">Device</th>
+            <th class="py-2 pr-3">Last login</th>
+            <th class="py-2 pr-3">Logins</th>
+            <th class="py-2 pr-3">Orders</th>
+            <th class="py-2 pr-3"><span class="sr-only">History</span></th>
+          </tr>
+        </thead>
+        <tbody id="partners-body"></tbody>
+      </table>
+    </div>
+    <h2 class="font-display font-semibold mb-3 mt-8">🛡️ Admins</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[820px]">
+        <thead>
+          <tr class="text-left text-muted border-b" style="border-color:var(--border)">
+            <th class="py-2 pr-3">Admin</th>
+            <th class="py-2 pr-3">Joined</th>
+            <th class="py-2 pr-3">Device</th>
+            <th class="py-2 pr-3">Last login</th>
+            <th class="py-2 pr-3">Logins</th>
+            <th class="py-2 pr-3">Orders</th>
+            <th class="py-2 pr-3"><span class="sr-only">History</span></th>
+          </tr>
+        </thead>
+        <tbody id="admins-body"></tbody>
       </table>
     </div>
   </section>
@@ -309,11 +343,16 @@ async function deleteDish(id) {
 
 /* ---------------- Visitor analytics ---------------- */
 
+/** Toggle the per-device login-history row under a user/partner/admin row. */
+function toggleSessions(id) {
+  const row = document.getElementById("sess-" + id);
+  if (row) row.classList.toggle("hidden");
+}
+
 /** GET /api/admin/visits + /api/admin/users -> analytics tables */
 async function loadAnalytics() {
   const vb = document.getElementById("visits-body");
-  const ub = document.getElementById("users-body");
-  if (!vb || !ub) return;
+  if (!vb) return;
 
   // --- visits ---
   vb.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-muted">Loading…</td></tr>`;
@@ -338,34 +377,82 @@ async function loadAnalytics() {
     vb.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-muted">${esc(e.message)}</td></tr>`;
   }
 
-  // --- users ---
-  ub.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-muted">Loading…</td></tr>`;
+  // --- users / restaurant partners / admins (3 separate sections) ---
+  const ub = document.getElementById("users-body");
+  const pb = document.getElementById("partners-body");
+  const ab = document.getElementById("admins-body");
+  if (!ub || !pb || !ab) return;
+  const loadingRow = `<tr><td colspan="7" class="py-6 text-center text-muted">Loading…</td></tr>`;
+  ub.innerHTML = loadingRow; pb.innerHTML = loadingRow; ab.innerHTML = loadingRow;
+
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  const fmtDT = (d) => d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+
+  // One person's per-device login history -> inner table rows
+  const sessionRows = (hist) => {
+    if (!hist || !hist.length) return `<tr><td colspan="6" class="py-4 text-center text-muted">No login records yet.</td></tr>`;
+    return hist.map(s => {
+      const loc = [s.city, s.country].filter(Boolean).join(", ") || "—";
+      const exit = s.logoutAt ? fmtDT(s.logoutAt) : `<span class="text-muted">—</span>`;
+      return `<tr class="border-b" style="border-color:var(--border)">
+        <td class="py-1.5 pr-3 whitespace-nowrap">${fmtDT(s.loginAt)}</td>
+        <td class="py-1.5 pr-3 whitespace-nowrap">${exit}</td>
+        <td class="py-1.5 pr-3 font-mono">${esc(s.ip || "—")}</td>
+        <td class="py-1.5 pr-3">${esc(s.device || "—")}</td>
+        <td class="py-1.5 pr-3">${esc(s.browser || "—")}</td>
+        <td class="py-1.5 pr-3">${esc(loc)}</td></tr>`;
+    }).join("");
+  };
+
+  // One table row + its expandable per-device history row
+  const personRow = (u, showRestaurant) => {
+    const id = String(u._id);
+    const hist = u.loginHistory || [];
+    const latest = hist[0];
+    const rest = (showRestaurant && u.restaurant && u.restaurant.name)
+      ? `<br><span class="text-xs font-semibold" style="color:var(--brand-dark)">🏪 ${esc(u.restaurant.name)}</span>` : "";
+    const joinIp = u.signupIp ? `<br><span class="text-xs font-mono text-muted">${esc(u.signupIp)}</span>` : "";
+    const loginIp = u.lastLoginIp ? `<br><span class="text-xs font-mono text-muted">${esc(u.lastLoginIp)}</span>` : "";
+    const device = latest && latest.device ? esc(latest.device) : `<span class="text-muted">—</span>`;
+    const lastLogin = u.lastLogin ? fmtDT(u.lastLogin) : `<span class="text-muted">never</span>`;
+    return `<tr class="border-b" style="border-color:var(--border)">
+      <td class="py-2 pr-3">${esc(u.name || "—")}<br><span class="text-xs text-muted">${esc(u.email || "")}</span>${rest}</td>
+      <td class="py-2 pr-3 whitespace-nowrap">${fmtDate(u.createdAt)}${joinIp}</td>
+      <td class="py-2 pr-3">${device}</td>
+      <td class="py-2 pr-3 whitespace-nowrap">${lastLogin}${loginIp}</td>
+      <td class="py-2 pr-3">${u.loginCount || 0}</td>
+      <td class="py-2 pr-3 font-semibold">${u.orderCount ?? "—"}</td>
+      <td class="py-2 pr-3 whitespace-nowrap"><button onclick="toggleSessions('${id}')" class="text-xs font-bold px-2 py-1 rounded-lg" style="background:var(--surface);border:1px solid var(--border);color:var(--brand-dark)">📋 History</button></td></tr>
+    <tr id="sess-${id}" class="hidden"><td colspan="7" class="py-3 px-3" style="background:var(--surface)">
+      <div class="text-xs font-bold mb-1" style="color:var(--brand-dark)">Login history — every device: IP, login & exit time</div>
+      <table class="w-full text-xs"><thead><tr class="text-left text-muted border-b" style="border-color:var(--border)">
+        <th class="py-1 pr-3">Login</th><th class="py-1 pr-3">Exit</th><th class="py-1 pr-3">IP</th>
+        <th class="py-1 pr-3">Device</th><th class="py-1 pr-3">Browser</th><th class="py-1 pr-3">Location</th>
+      </tr></thead><tbody>${sessionRows(hist)}</tbody></table>
+    </td></tr>`;
+  };
+
+  const fillTable = (bodyId, rows, emptyMsg) => {
+    document.getElementById(bodyId).innerHTML = rows.length
+      ? rows.join("")
+      : `<tr><td colspan="7" class="py-6 text-center text-muted">${emptyMsg}</td></tr>`;
+  };
+
   try {
     const users = await apiFetch("/admin/users", { auth: true });
     const list = Array.isArray(users) ? users : (users.users || []);
-    const roleBadge = (r) => r === "admin"
-      ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#ede9fe;color:#5b21b6">ADMIN</span>`
-      : r === "restaurant"
-      ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#ffedd5;color:#9a3412">PARTNER</span>`
-      : `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#e0f2fe;color:#075985">USER</span>`;
-    ub.innerHTML = list.length ? list.map(u => {
-      const joined = u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
-      const lastLogin = u.lastLogin
-        ? new Date(u.lastLogin).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
-        : `<span class="text-muted">never</span>`;
-      const rest = (u.role === "restaurant" && u.restaurant && u.restaurant.name)
-        ? `<br><span class="text-xs font-semibold" style="color:var(--brand-dark)">🏪 ${esc(u.restaurant.name)}</span>` : "";
-      return `<tr class="border-b" style="border-color:var(--border)">
-        <td class="py-2 pr-3">${esc(u.name || "—")}<br><span class="text-xs text-muted">${esc(u.email || "")}</span>${rest}</td>
-        <td class="py-2 pr-3">${roleBadge(u.role)}</td>
-        <td class="py-2 pr-3 whitespace-nowrap">${joined}</td>
-        <td class="py-2 pr-3 whitespace-nowrap">${lastLogin}</td>
-        <td class="py-2 pr-3">${u.loginCount || 0}</td>
-        <td class="py-2 pr-3 font-mono text-xs">${esc(u.lastLoginIp || "—")}</td>
-        <td class="py-2 pr-3 font-semibold">${u.orderCount ?? "—"}</td></tr>`;
-    }).join("") : `<tr><td colspan="7" class="py-6 text-center text-muted">No users yet.</td></tr>`;
+    fillTable("users-body",
+      list.filter(u => u.role !== "admin" && u.role !== "restaurant").map(u => personRow(u, false)),
+      "No users yet.");
+    fillTable("partners-body",
+      list.filter(u => u.role === "restaurant").map(u => personRow(u, true)),
+      "No restaurant partners yet.");
+    fillTable("admins-body",
+      list.filter(u => u.role === "admin").map(u => personRow(u, false)),
+      "No admins.");
   } catch (e) {
-    ub.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-muted">${esc(e.message)}</td></tr>`;
+    const msg = `<tr><td colspan="7" class="py-6 text-center text-muted">${esc(e.message)}</td></tr>`;
+    ub.innerHTML = msg; pb.innerHTML = msg; ab.innerHTML = msg;
   }
 }
 

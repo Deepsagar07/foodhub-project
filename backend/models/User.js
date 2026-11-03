@@ -30,6 +30,8 @@ const userSchema = new mongoose.Schema(
     lastLogin: { type: Date, default: null },
     loginCount: { type: Number, default: 0 },
     lastLoginIp: { type: String, default: '' },
+    // IP address the account was created from (first join)
+    signupIp: { type: String, default: '' },
     addresses: { type: [addressSchema], default: [] },
   },
   { timestamps: true }

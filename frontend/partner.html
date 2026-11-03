@@ -73,6 +73,12 @@
       </div>
     </div>
 
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-display font-bold text-lg">🍽️ My Menu</h2>
+      <button class="btn-brand !py-2 !px-4 text-sm" onclick="openDishModal()">+ Add Dish</button>
+    </div>
+    <div id="sec-menu" class="space-y-2 mb-8"></div>
+
     <h2 class="font-display font-bold text-lg mb-3">🔔 New Orders <span class="text-xs font-medium text-muted">(needs accept / reject)</span></h2>
     <div id="sec-new" class="space-y-3 mb-8"></div>
 
@@ -87,6 +93,35 @@
   </div>
 
 </main>
+
+<!-- Add/Edit dish modal -->
+<div id="dish-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/50" onclick="closeDishModal()"></div>
+  <div class="surface rounded-2xl p-6 w-full max-w-md relative" style="box-shadow:var(--shadow)">
+    <h3 id="dish-modal-title" class="font-display font-bold text-lg mb-4">Add Dish</h3>
+    <input type="hidden" id="d-id">
+    <div class="space-y-3">
+      <input id="d-name" class="input" placeholder="Dish name *">
+      <textarea id="d-desc" class="input" rows="2" placeholder="Description"></textarea>
+      <div class="grid grid-cols-2 gap-3">
+        <input id="d-price" type="number" class="input" placeholder="Price (₹) *" min="0">
+        <input id="d-category" class="input" placeholder="Category * (e.g. Biryani)">
+      </div>
+      <input id="d-image" class="input" placeholder="Photo URL (optional)">
+      <div>
+        <label class="text-sm font-medium block mb-1">Or upload a photo</label>
+        <input id="d-photo" type="file" accept="image/*" class="input">
+      </div>
+      <label class="flex items-center gap-2 text-sm font-medium">
+        <input id="d-veg" type="checkbox" checked class="w-4 h-4"> Veg dish
+      </label>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button class="btn-brand flex-1" onclick="saveDish()">Save</button>
+      <button class="px-4 py-2 rounded-xl surface font-semibold text-sm hover:opacity-70" onclick="closeDishModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script src="js/api.js"></script>
 <script src="js/common.js"></script>
@@ -146,6 +181,16 @@ async function partnerLogin() {
 }
 
 function partnerLogout() {
+  try {
+    const t = localStorage.getItem(P_TOKEN);
+    if (t && typeof API_BASE !== "undefined") {
+      fetch(API_BASE + "/auth/logout", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + t },
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch (e) {}
   localStorage.removeItem(P_TOKEN);
   localStorage.removeItem(P_USER);
   if (socket) { socket.disconnect(); socket = null; }
@@ -172,6 +217,7 @@ async function enterPanel() {
     document.getElementById("login-view").classList.add("hidden");
     document.getElementById("panel-view").classList.remove("hidden");
     await loadOrders();
+    loadMenu();
     connectSocket();
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(() => loadOrders(true), 15000); // fallback if socket drops
@@ -257,6 +303,119 @@ async function act(id, action) {
     loadOrders();
   } catch (e) {
     toast(e.message || "Action failed.", "error");
+  }
+}
+
+/* ---------- menu management ---------- */
+
+async function loadMenu() {
+  const wrap = document.getElementById("sec-menu");
+  if (!wrap) return;
+  wrap.innerHTML = `<p class="text-sm text-muted">Loading menu…</p>`;
+  try {
+    const menu = await pFetch("/partner/menu");
+    window.__pmenu = menu;
+    if (!menu.length) {
+      wrap.innerHTML = emptyBox("No dishes yet — add your first one! 🍽️");
+      return;
+    }
+    wrap.innerHTML = menu.map(m => {
+      const id = JSON.stringify(String(m._id));
+      const availBtn = m.isAvailable
+        ? `<button class="text-xs font-bold px-2 py-1 rounded-lg whitespace-nowrap" style="background:#dcfce7;color:#166534" onclick='toggleAvail(${id})' title="Tap to mark unavailable">● Available</button>`
+        : `<button class="text-xs font-bold px-2 py-1 rounded-lg whitespace-nowrap" style="background:#fee2e2;color:#991b1b" onclick='toggleAvail(${id})' title="Tap to mark available">● Unavailable</button>`;
+      const img = m.image
+        ? `<img src="${esc(m.image)}" class="w-12 h-12 rounded-xl object-cover shrink-0" loading="lazy" onerror="this.style.display='none'">`
+        : "";
+      return `<div class="surface rounded-xl p-2 flex items-center gap-3" style="${m.isAvailable ? "" : "opacity:.55"}">
+        ${img}
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-sm truncate">${esc(m.name)} ${m.veg ? "🟢" : "🔴"}</p>
+          <p class="text-xs text-muted">${esc(m.category || "")} • ${inr(m.price)}</p>
+        </div>
+        ${availBtn}
+        <button class="text-sm font-semibold px-3 py-1 rounded-lg surface hover:opacity-80" onclick='openDishModal(${id})'>Edit</button>
+        <button class="text-sm font-semibold px-3 py-1 rounded-lg hover:opacity-80" style="color:var(--danger);background:#fee2e2" onclick='deleteDish(${id})'>Delete</button>
+      </div>`;
+    }).join("");
+  } catch (e) {
+    if (e.message !== "unauthorized") wrap.innerHTML = `<p class="text-sm" style="color:var(--danger)">${esc(e.message)}</p>`;
+  }
+}
+
+function openDishModal(id) {
+  document.getElementById("dish-modal").classList.remove("hidden");
+  const m = id ? (window.__pmenu || []).find(x => String(x._id) === String(id)) : null;
+  document.getElementById("dish-modal-title").textContent = m ? "Edit Dish" : "Add Dish";
+  document.getElementById("d-id").value = m ? m._id : "";
+  document.getElementById("d-name").value = m ? m.name : "";
+  document.getElementById("d-desc").value = m ? (m.description || "") : "";
+  document.getElementById("d-price").value = m ? m.price : "";
+  document.getElementById("d-category").value = m ? (m.category || "") : "";
+  document.getElementById("d-image").value = m ? (m.image || "") : "";
+  document.getElementById("d-veg").checked = m ? !!m.veg : true;
+  document.getElementById("d-photo").value = "";
+}
+
+function closeDishModal() {
+  document.getElementById("dish-modal").classList.add("hidden");
+}
+
+/**
+ * POST /partner/menu (add) or PUT /partner/menu/:id (edit).
+ * Backend uses multer ("image" file field), so we send FormData —
+ * never set Content-Type manually, the browser adds the boundary.
+ */
+async function saveDish() {
+  const id = document.getElementById("d-id").value;
+  const name = document.getElementById("d-name").value.trim();
+  const price = document.getElementById("d-price").value;
+  const category = document.getElementById("d-category").value.trim();
+  if (!name || !price || !category) { toast("Name, price and category are required.", "error"); return; }
+
+  const fd = new FormData();
+  fd.append("name", name);
+  fd.append("description", document.getElementById("d-desc").value.trim());
+  fd.append("price", price);
+  fd.append("category", category);
+  fd.append("image", document.getElementById("d-image").value.trim());
+  fd.append("veg", document.getElementById("d-veg").checked ? "true" : "false");
+  const photo = document.getElementById("d-photo").files[0];
+  if (photo) fd.append("image", photo); // multer picks up the file
+
+  try {
+    const res = await fetch(API_BASE + (id ? "/partner/menu/" + id : "/partner/menu"), {
+      method: id ? "PUT" : "POST",
+      headers: { "Authorization": "Bearer " + localStorage.getItem(P_TOKEN) },
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Save failed");
+    toast("Dish saved! 🎉", "success");
+    closeDishModal();
+    loadMenu();
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+async function deleteDish(id) {
+  if (!confirm("Delete this dish permanently?")) return;
+  try {
+    await pFetch("/partner/menu/" + id, { method: "DELETE" });
+    toast("Dish deleted.", "success");
+    loadMenu();
+  } catch (e) {
+    if (e.message !== "unauthorized") toast(e.message, "error");
+  }
+}
+
+async function toggleAvail(id) {
+  try {
+    await pFetch("/partner/menu/" + id + "/availability", { method: "PATCH" });
+    loadMenu();
+  } catch (e) {
+    if (e.message !== "unauthorized") toast(e.message, "error");
   }
 }
 

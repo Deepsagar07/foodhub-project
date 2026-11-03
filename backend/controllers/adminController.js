@@ -3,6 +3,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 const MenuItem = require('../models/MenuItem');
+const LoginSession = require('../models/LoginSession');
 const asyncHandler = require('../middleware/asyncHandler');
 const { fileUrl } = require('../middleware/upload');
 
@@ -124,10 +125,21 @@ const getUsers = asyncHandler(async (req, res) => {
     .populate('restaurant', 'name')
     .sort({ createdAt: -1 })
     .lean();
+  const ids = users.map((u) => u._id);
+  // Latest 8 login sessions per user (per-device IP / login / logout history)
+  const sessions = await LoginSession.find({ user: { $in: ids } })
+    .sort({ loginAt: -1 })
+    .lean();
+  const byUser = {};
+  for (const s of sessions) {
+    const k = String(s.user);
+    (byUser[k] = byUser[k] || []).push(s);
+  }
   const withOrders = await Promise.all(
     users.map(async (u) => ({
       ...u,
       orderCount: await Order.countDocuments({ user: u._id }),
+      loginHistory: (byUser[String(u._id)] || []).slice(0, 8),
     }))
   );
   res.json(withOrders);

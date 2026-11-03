@@ -1,7 +1,9 @@
-// Auth controller: register, login, and "who am I".
+// Auth controller: register, login, logout, and "who am I".
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const LoginSession = require('../models/LoginSession');
+const { geoLookup, parseDevice, parseBrowser } = require('../utils/geoip');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,7 +45,12 @@ const register = asyncHandler(async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10); // 10 salt rounds
-  const user = await User.create({ name: name.trim(), email: normalizedEmail, passwordHash });
+  const user = await User.create({
+    name: name.trim(),
+    email: normalizedEmail,
+    passwordHash,
+    signupIp: req.ip || '', // IP of first join (shown in admin dashboard)
+  });
 
   res.status(201).json({ token: signToken(user), user: safeUser(user) });
 });
@@ -72,7 +79,38 @@ const login = asyncHandler(async (req, res) => {
   user.lastLoginIp = req.ip || '';
   await user.save();
 
+  // Record this login as its own session (per-device history for admin).
+  // Geo lookup runs in the background so login never waits for it.
+  const ua = req.headers['user-agent'] || '';
+  const session = await LoginSession.create({
+    user: user._id,
+    ip: req.ip || '',
+    userAgent: ua,
+    device: parseDevice(ua),
+    browser: parseBrowser(ua),
+  });
+  geoLookup(req.ip)
+    .then((g) => {
+      if (g && (g.city || g.country)) {
+        LoginSession.updateOne(
+          { _id: session._id },
+          { $set: { city: g.city || '', country: g.country || '' } }
+        ).catch(() => {});
+      }
+    })
+    .catch(() => {});
+
   res.json({ token: signToken(user), user: safeUser(user) });
+});
+
+// POST /api/auth/logout  (protect) -> mark the latest open session as exited
+const logout = asyncHandler(async (req, res) => {
+  await LoginSession.findOneAndUpdate(
+    { user: req.user.id, logoutAt: null },
+    { $set: { logoutAt: new Date() } },
+    { sort: { loginAt: -1 } }
+  );
+  res.json({ ok: true });
 });
 
 // GET /api/auth/me  (protect) -> current user
@@ -82,4 +120,4 @@ const me = asyncHandler(async (req, res) => {
   res.json(user);
 });
 
-module.exports = { register, login, me };
+module.exports = { register, login, logout, me };

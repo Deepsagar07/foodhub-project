@@ -28,8 +28,18 @@ async function login(email, password) {
   return data.user;
 }
 
-/** Log out: clear session and go home. */
+/** Log out: tell the server (marks this login session as exited), clear session and go home. */
 function logout() {
+  try {
+    const t = localStorage.getItem("fh_token");
+    if (t && typeof API_BASE !== "undefined") {
+      fetch(API_BASE + "/auth/logout", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + t },
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch (e) {}
   localStorage.removeItem("fh_token");
   localStorage.removeItem("fh_user");
   location.href = "index.html";
