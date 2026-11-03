@@ -29,11 +29,26 @@
     <div class="surface rounded-2xl p-8" style="box-shadow:var(--shadow)">
       <div class="text-center mb-6">
         <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white mb-3" style="background:var(--brand)">🏪</div>
-        <h1 class="font-display font-bold text-2xl">Register Your Restaurant</h1>
-        <p class="text-sm text-muted mt-1">Join FoodHub — manage live orders, menu & delivery boys.</p>
+        <h1 class="font-display font-bold text-2xl">Restaurant Partner</h1>
+        <p class="text-sm text-muted mt-1">Manage live orders, menu & delivery boys.</p>
+      </div>
+      <!-- TABS -->
+      <div class="flex gap-2 mb-6">
+        <button id="tab-login" onclick="pTab('login')" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white" style="background:var(--brand)">Login</button>
+        <button id="tab-register" onclick="pTab('register')" class="flex-1 py-2.5 rounded-xl text-sm font-bold surface text-muted hover:opacity-70">Register</button>
+      </div>
+      <!-- LOGIN -->
+      <div id="pane-login" class="space-y-3">
+        <input id="p-email" type="email" class="input" placeholder="Email *">
+        <div class="relative"><input id="p-password" type="password" class="input pr-11" placeholder="Password *"><button type="button" onclick="togglePw('p-password', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+        <p id="p-login-err" class="text-sm hidden" style="color:var(--danger)"></p>
+        <button class="btn-brand w-full" onclick="partnerLogin()">Login to Dashboard</button>
+        <p class="text-sm text-muted text-center mt-2">
+          New here? <a href="#" onclick="pTab('register');return false;" class="font-semibold" style="color:var(--brand-dark)">Register your restaurant</a>
+        </p>
       </div>
       <!-- REGISTER -->
-      <div id="pane-register" class="space-y-3">
+      <div id="pane-register" class="space-y-3 hidden">
         <p class="text-xs font-bold" style="color:var(--brand-dark)">YOUR RESTAURANT</p>
         <input id="rg-rname" class="input" placeholder="Restaurant name *">
         <div class="grid grid-cols-2 gap-3">
@@ -56,7 +71,7 @@
         <button class="btn-brand w-full" onclick="partnerRegister()">Register My Restaurant</button>
         <p class="text-xs text-muted text-center">Your restaurant goes live after a quick admin approval. You can add your menu right away!</p>
         <p class="text-sm text-muted text-center mt-2">
-          Already registered? <a href="login.html" class="font-semibold" style="color:var(--brand-dark)">Log in here</a>
+          Already registered? <a href="#" onclick="pTab('login');return false;" class="font-semibold" style="color:var(--brand-dark)">Log in here</a>
         </p>
       </div>
     </div>
@@ -627,6 +642,48 @@ function connectSocket() {
       if (d) { d.textContent = "● POLLING"; d.style.background = "#fef3c7"; d.style.color = "#92400e"; }
     });
   } catch (e) { /* polling fallback keeps it working */ }
+}
+
+/* ---------- Login / Register tabs ---------- */
+function pTab(which) {
+  const isLogin = which === "login";
+  document.getElementById("pane-login").classList.toggle("hidden", !isLogin);
+  document.getElementById("pane-register").classList.toggle("hidden", isLogin);
+  const tl = document.getElementById("tab-login");
+  const tr = document.getElementById("tab-register");
+  tl.style.background = isLogin ? "var(--brand)" : "";
+  tl.classList.toggle("text-white", isLogin);
+  tl.classList.toggle("surface", !isLogin);
+  tl.classList.toggle("text-muted", !isLogin);
+  tr.style.background = !isLogin ? "var(--brand)" : "";
+  tr.classList.toggle("text-white", !isLogin);
+  tr.classList.toggle("surface", isLogin);
+  tr.classList.toggle("text-muted", isLogin);
+}
+
+/** Partner login (right here on partner.html, like before). */
+async function partnerLogin() {
+  const email = document.getElementById("p-email").value.trim();
+  const password = document.getElementById("p-password").value;
+  const err = document.getElementById("p-login-err");
+  err.classList.add("hidden");
+  if (!email || !password) {
+    err.textContent = "Enter your email and password.";
+    err.classList.remove("hidden");
+    return;
+  }
+  try {
+    const user = await login(email, password); // saves fh_token + fh_user
+    if (user.role !== "restaurant") {
+      err.textContent = "This account is not a restaurant partner.";
+      err.classList.remove("hidden");
+      return;
+    }
+    enterPanel();
+  } catch (e) {
+    err.textContent = e.message || "Login failed.";
+    err.classList.remove("hidden");
+  }
 }
 
 /* ---------- boot ---------- */
