@@ -225,6 +225,21 @@ function renderNavbar() {
   const nav = document.getElementById("navbar");
   if (!nav) return;
 
+  // Admins see only a minimal navbar: logo + theme + profile. No customer
+  // links (Home/My Orders/Favorites), no location picker, no cart.
+  if (user && user.role === "admin") {
+    nav.innerHTML =
+      '<div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">'
+      + '<a href="admin.html" class="flex items-center gap-2 font-display font-bold text-xl">'
+      + '<span class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xl" style="background:var(--brand)">🍔</span>'
+      + '<span>Food<span style="color:var(--brand)">Hub</span></span></a>'
+      + '<div class="flex items-center gap-2">'
+      + '<button onclick="toggleTheme()" class="w-10 h-10 rounded-xl surface flex items-center justify-center" title="Toggle dark mode"><span class="theme-icon">' + themeIcon + "</span></button>"
+      + profileDropdown(user)
+      + "</div></div>";
+    return;
+  }
+
   nav.innerHTML =
     '<div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">'
     + '<a href="index.html" class="flex items-center gap-2 font-display font-bold text-xl">'
@@ -479,8 +494,9 @@ function profileDropdown(user) {
     + '<div class="px-4 py-2 border-b" style="border-color:var(--border)">'
     + '<p class="font-semibold text-sm truncate">' + esc(user.name) + "</p>"
     + '<p class="text-xs text-muted truncate">' + esc(user.email || "") + "</p></div>"
-    + '<a href="orders.html" class="block px-4 py-2 text-sm hover:opacity-70">📦 My Orders</a>'
-    + '<a href="favorites.html" class="block px-4 py-2 text-sm hover:opacity-70">❤️ Favorites</a>'
+    + (user.role === "admin" ? ""
+      : '<a href="orders.html" class="block px-4 py-2 text-sm hover:opacity-70">📦 My Orders</a>'
+      + '<a href="favorites.html" class="block px-4 py-2 text-sm hover:opacity-70">❤️ Favorites</a>')
     + (isAdmin() ? '<a href="admin.html" class="block px-4 py-2 text-sm hover:opacity-70">📊 Admin Dashboard</a>' : "")
     + '<button onclick="logout()" class="block w-full text-left px-4 py-2 text-sm font-medium hover:opacity-70" style="color:#dc2626">↩ Logout</button>'
     + "</div></div>";
@@ -510,6 +526,9 @@ document.addEventListener("click", function (e) {
 
 function renderMobileNav() {
   if (document.getElementById("mobile-nav")) return;
+  // Admins don't get the mobile customer nav (Home/Orders/Cart/Saved).
+  const _au = currentUser();
+  if (_au && _au.role === "admin") return;
   const themeIcon = (localStorage.getItem("fh_theme") || "light") === "dark" ? "☀️" : "🌙";
   const el = document.createElement("nav");
   el.id = "mobile-nav";
@@ -686,6 +705,9 @@ const SOC_ICONS = {
 
 function renderFooter() {
   if (document.getElementById("site-footer")) return;
+  // Admins see only their dashboard — no customer footer.
+  const _au = currentUser();
+  if (_au && _au.role === "admin") return;
   const f = document.createElement("footer");
   f.id = "site-footer";
   f.className = "mt-16 surface border-t";
