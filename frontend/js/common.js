@@ -764,7 +764,7 @@ function renderFooter() {
     + "<p>FSSAI Lic. No. 10012043001234</p>"
     + "<p>Built as a Frontend Engineering course project</p>"
     + "<p>Developed by "
-    + '<span class="font-semibold" style="color:var(--brand)">Deep Sagar</span> & '
+    + '<a href="https://muse.ai/s/deep-sagar-xsa6xv5be28r6/O2Q4S6y18qpIjwlM641688rDlZFRWXBFPhrGTAaM1x0" target="_blank" rel="noopener" class="font-semibold hover:opacity-70" style="color:var(--brand)">Deep Sagar</a> & '
     + '<span class="font-semibold" style="color:var(--brand)">Ayush Gupta</span></p>'
     + "</div></div>";
   document.body.appendChild(f);
