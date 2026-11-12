@@ -218,9 +218,10 @@ async function init() {
         <p class="text-sm text-muted">${label}</p>
       </div>`).join("");
 
-    // top-dishes bar chart (accepts a few backend shapes)
+    // top-dishes bar chart (accepts a few backend shapes). Chart failure
+    // (e.g. CDN blocked) must not wipe the stat cards rendered above.
     const top = s.topDishes || s.popularDishes || [];
-    drawChart(top);
+    try { drawChart(top); } catch (e) { /* chart is optional */ }
   } catch (e) {
     wrap.innerHTML = `<p class="col-span-full text-muted text-sm">Could not load stats: ${esc(e.message)}</p>`;
   }
@@ -358,10 +359,16 @@ function drawChart(top) {
 
 async function loadRestaurantsForMenu() {
   const sel = document.getElementById("menu-rest");
-  const data = await apiFetch("/restaurants");
-  const list = data.restaurants || data || [];
-  sel.innerHTML = list.map(r => `<option value="${r._id || r.id}">${esc(r.name)}</option>`).join("");
-  if (list.length) loadMenu();
+  // A failure here used to abort the whole dashboard init (orders, analytics
+  // and restaurants below never loaded). Fail locally instead.
+  try {
+    const data = await apiFetch("/restaurants");
+    const list = data.restaurants || data || [];
+    sel.innerHTML = list.map(r => `<option value="${r._id || r.id}">${esc(r.name)}</option>`).join("");
+    if (list.length) loadMenu();
+  } catch (e) {
+    sel.innerHTML = "";
+  }
 }
 
 async function loadMenu() {

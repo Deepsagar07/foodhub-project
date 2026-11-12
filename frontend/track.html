@@ -89,7 +89,7 @@ function render(o) {
     wrap.innerHTML = `<div class="surface rounded-2xl p-8 text-center">
       <div class="text-5xl mb-3">❌</div>
       <h2 class="font-display font-bold text-xl mb-2">Order cancelled</h2>
-      <p class="text-muted text-sm">This order was cancelled. Your money (if paid) will be refunded.</p>
+      <p class="text-muted text-sm">This order was cancelled. No payment was taken — this was a Cash on Delivery order, so there's nothing to refund.</p>
       <a href="index.html" class="btn-brand inline-block mt-5">Order Again</a></div>`;
     clearInterval(timer);
     return;

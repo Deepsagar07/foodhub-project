@@ -30,7 +30,8 @@ function imgUrl(u) {
  * @param {string} path   e.g. "/restaurants?search=pizza"
  * @param {object} opts   { method, body, auth }
  *   - auth: true  -> attach "Authorization: Bearer <token>"
- * On 401 the user is logged out and sent to login.html.
+ * On 401 for an authed call the user is logged out and sent to login.html.
+ * A 401 on a public call (auth:false) just throws — no logout, no redirect.
  * On other errors it throws an Error with the server's message.
  */
 async function apiFetch(path, { method = "GET", body = null, auth = false } = {}) {
@@ -48,11 +49,15 @@ async function apiFetch(path, { method = "GET", body = null, auth = false } = {}
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // Token expired / invalid -> force re-login
+  // Token expired / invalid -> force re-login (authed calls only).
+  // Public calls (auth:false) must not log the user out or redirect;
+  // they just throw so the caller can handle the error.
   if (res.status === 401) {
-    localStorage.removeItem("fh_token");
-    localStorage.removeItem("fh_user");
-    location.href = "login.html";
+    if (auth) {
+      localStorage.removeItem("fh_token");
+      localStorage.removeItem("fh_user");
+      location.href = "login.html";
+    }
     throw new Error("Session expired. Please log in again.");
   }
 

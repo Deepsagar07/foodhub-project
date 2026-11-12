@@ -6,14 +6,20 @@ const cache = new Map();
 
 function isLocalIp(ip) {
   if (!ip) return true;
-  return (
+  if (
     ip === '127.0.0.1' ||
     ip === '::1' ||
     ip === '::ffff:127.0.0.1' ||
     ip.startsWith('192.168.') ||
-    ip.startsWith('10.') ||
-    ip.startsWith('172.16.')
-  );
+    ip.startsWith('10.')
+  ) return true;
+  // Full RFC1918 172.16.0.0/12 range: second octet 16-31 (not just 172.16.x.x)
+  const m = /^172\.(\d+)\./.exec(ip);
+  if (m) {
+    const second = Number(m[1]);
+    if (second >= 16 && second <= 31) return true;
+  }
+  return false;
 }
 
 // "37.111.22.10" -> { city: "Dehradun", country: "India" } (city-level, approximate)
@@ -35,6 +41,10 @@ async function geoLookup(ip) {
     if (cache.size > 2000) cache.clear(); // keep memory bounded
     return out;
   } catch (e) {
+    // Cache failures too (negative entry) so a failing IP doesn't re-hit
+    // ip-api.com on every visit.
+    cache.set(ip, fallback);
+    if (cache.size > 2000) cache.clear();
     return fallback;
   }
 }

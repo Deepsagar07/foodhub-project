@@ -62,7 +62,7 @@
       <div id="summary" class="space-y-2 text-sm mb-4"></div>
       <div id="bill" class="space-y-2 text-sm pt-3 border-t" style="border-color:var(--border)"></div>
       <button id="place-btn" class="btn-brand w-full mt-5" onclick="placeOrder()">Place Order</button>
-      <p class="text-xs text-muted text-center mt-2">Payment is simulated in this demo build.</p>
+      <p class="text-xs text-muted text-center mt-2">Pay in cash when your food arrives.</p>
     </section>
   </div>
 </main>
@@ -108,6 +108,12 @@ function renderSummary() {
   ).join("");
 
   const subtotal = Cart.subtotal();
+  // Drop a stored coupon if the cart fell below its minimum order since it
+  // was applied (same guard as cart.html — backend re-validates at order time)
+  if (coupon && coupon.minOrder && subtotal < coupon.minOrder) {
+    coupon = null;
+    localStorage.removeItem("fh_coupon");
+  }
   const discount = coupon ? Math.min(coupon.discount, subtotal) : 0;
   let fee = RESTAURANT && RESTAURANT.deliveryFee != null ? Number(RESTAURANT.deliveryFee) : 30;
   if (coupon && coupon.freeDelivery) fee = 0;

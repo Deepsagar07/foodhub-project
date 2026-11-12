@@ -15,6 +15,7 @@ router.get(
       Restaurant.countDocuments({ status: { $nin: ['pending', 'suspended'] } }), // only live restaurants
       MenuItem.countDocuments({ isAvailable: true }),
       Restaurant.aggregate([
+        { $match: { status: { $nin: ['pending', 'suspended'] } } }, // same live-only filter as the count
         { $group: { _id: null, avg: { $avg: '$rating' } } },
       ]),
     ]);

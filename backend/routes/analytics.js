@@ -1,4 +1,5 @@
-// Analytics routes: visitor tracking beacon (public) and admin views (protected).
+// Analytics routes: public visitor tracking beacon (POST /visit only).
+// Admin views (visits/users) live in adminController.js, not in this file.
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const Visit = require('../models/Visit');

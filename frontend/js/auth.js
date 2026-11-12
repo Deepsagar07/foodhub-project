@@ -2,7 +2,7 @@
    FoodHub — auth helpers
    Token + user profile live in localStorage:
      fh_token -> JWT string
-     fh_user  -> { _id, name, email, role }
+     fh_user  -> { id, name, email, role }
    role is "admin" for the restaurant owner, "user" otherwise.
    ============================================================ */
 

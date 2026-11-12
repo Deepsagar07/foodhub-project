@@ -22,7 +22,9 @@ const validateCoupon = asyncHandler(async (req, res) => {
   if (!result.valid) {
     return res.json({ valid: false, message: result.message });
   }
-  res.json({ valid: true, discount: result.discount, freeDelivery: result.freeDelivery });
+  // minOrder lets the cart/checkout drop a stored coupon the moment the
+  // cart falls below it, instead of showing a discount the backend will reject
+  res.json({ valid: true, discount: result.discount, freeDelivery: result.freeDelivery, minOrder: coupon.minOrder });
 });
 
 // GET /api/coupons

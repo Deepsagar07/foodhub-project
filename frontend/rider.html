@@ -63,6 +63,7 @@
 </main>
 
 <script src="js/api.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/common.js"></script>
 <script>
 /* ============================================================
@@ -188,9 +189,11 @@ function deliveryCard(o) {
   const tracking = window.__tracking && window.__tracking[o._id];
   let action = "";
   if (o.status === "on_the_way") {
+    // Delivered stays hidden until pickup — the backend enforces the same
+    // order, so a rider can't skip pickup and break live tracking.
     action = `<div class="flex gap-2 mt-3">
       ${!o.pickedUpAt ? `<button onclick="markPickedUp('${o._id}')" class="flex-1 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700">📦 Pick Up</button>` : ""}
-      <button onclick="markDelivered('${o._id}')" class="flex-1 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700">✅ Mark Delivered</button>
+      ${o.pickedUpAt ? `<button onclick="markDelivered('${o._id}')" class="flex-1 text-white text-sm font-bold px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700">✅ Mark Delivered</button>` : ""}
     </div>
     <button onclick="toggleTracking('${o._id}')" class="w-full mt-2 text-sm font-bold px-4 py-2 rounded-xl surface hover:opacity-70">
       ${tracking ? "⏸ Stop Live Location" : "📍 Share Live Location"}

@@ -6,7 +6,7 @@ const Coupon = require('../models/Coupon');
 const asyncHandler = require('../middleware/asyncHandler');
 const { calculateDiscount } = require('../utils/discount');
 
-const PAYMENT_METHODS = ['cod', 'upi', 'card'];
+const PAYMENT_METHODS = ['cod']; // COD only — no online payments (no verification exists for upi/card)
 const STATUSES = ['placed', 'preparing', 'on_the_way', 'delivered', 'cancelled'];
 
 // POST /api/orders (protect)
@@ -65,6 +65,7 @@ const createOrder = asyncHandler(async (req, res) => {
   // Apply coupon if one was given
   let discount = 0;
   let deliveryFee = restaurant.deliveryFee;
+  let appliedCoupon = null; // set below; used for the post-create race re-check
   if (couponCode) {
     const coupon = await Coupon.findOne({ code: String(couponCode).toUpperCase().trim() });
     const result = calculateDiscount(coupon, subtotal);
@@ -84,6 +85,7 @@ const createOrder = asyncHandler(async (req, res) => {
     }
     discount = result.discount;
     if (result.freeDelivery) deliveryFee = 0;
+    appliedCoupon = coupon;
   }
 
   const total = subtotal - discount + deliveryFee;
@@ -102,6 +104,22 @@ const createOrder = asyncHandler(async (req, res) => {
     deliveryLat: typeof deliveryLat === 'number' ? deliveryLat : null,
     deliveryLng: typeof deliveryLng === 'number' ? deliveryLng : null,
   });
+
+  // Re-check the per-user coupon limit AFTER creating the order: two
+  // simultaneous checkouts can both pass the pre-check above (check-then-act
+  // race). If the limit is now exceeded, roll the order back instead of
+  // letting both checkouts consume the coupon.
+  if (appliedCoupon) {
+    const usesAfter = await Order.countDocuments({
+      user: req.user.id,
+      couponCode: appliedCoupon.code,
+      status: { $ne: 'cancelled' },
+    });
+    if (usesAfter > (appliedCoupon.maxUsesPerUser || 1)) {
+      await order.deleteOne();
+      return res.status(400).json({ message: 'Coupon usage limit reached' });
+    }
+  }
 
   // Notify the restaurant's partner panel in real time (it beeps on 'new-order').
   // Note: no customer address in the payload — socket rooms aren't authenticated,
@@ -150,10 +168,13 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true });
   if (!order) return res.status(404).json({ message: 'Order not found' });
   // Push the new status to anyone watching this order on track.html (real-time)
-  req.app.get('io').to('order:' + order._id).emit('order-status', {
-    orderId: String(order._id),
-    status: order.status,
-  });
+  const io = req.app.get('io');
+  if (io) {
+    io.to('order:' + order._id).emit('order-status', {
+      orderId: String(order._id),
+      status: order.status,
+    });
+  }
   res.json(order);
 });
 

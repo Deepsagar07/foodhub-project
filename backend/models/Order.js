@@ -31,7 +31,7 @@ const orderSchema = new mongoose.Schema(
       enum: ['placed', 'preparing', 'on_the_way', 'delivered', 'cancelled'],
       default: 'placed',
     },
-    paymentMethod: { type: String, enum: ['cod', 'upi', 'card'], default: 'cod' },
+    paymentMethod: { type: String, enum: ['cod'], default: 'cod' }, // COD only — no online payments
     paymentStatus: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
     // The restaurant's own delivery boy assigned to this order (set by the partner)
     assignedRider: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

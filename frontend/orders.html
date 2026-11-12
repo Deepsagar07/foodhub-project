@@ -117,18 +117,29 @@ async function reorder(orderId) {
     }
     if (!cart) cart = { restaurantId, items: {} };
 
+    let added = 0, skipped = 0;
     o.items.forEach(oi => {
       // backend snapshots items as { menuItem, name, price, qty }
       const key = String(oi.menuItemId || oi.menuItem);
       const m = byId[key];
-      if (!m) return;
+      // skip dishes removed from the menu or now unavailable — adding them
+      // would only fail later at checkout
+      if (!m || m.isAvailable === false) { skipped++; return; }
+      // respect the 5-units-per-item cap (old code added qty uncapped, so
+      // the cart could show 8× while the backend silently charged for 5×)
+      const qty = Math.min((cart.items[key]?.qty || 0) + (oi.qty || 1), MAX_QTY_PER_ITEM);
       cart.items[key] = {
         _id: key, name: m.name, price: Number(m.price) || 0,
-        image: m.image || "", veg: !!(m.veg ?? m.isVeg), qty: (cart.items[key]?.qty || 0) + (oi.qty || 1),
+        image: m.image || "", veg: !!(m.veg ?? m.isVeg), qty,
       };
+      added++;
     });
+    if (!added) {
+      toast("Those dishes aren't available right now.", "error");
+      return;
+    }
     Cart.save(cart);
-    toast("Items added back to cart!", "success");
+    toast("Items added back to cart!" + (skipped ? ` (${skipped} unavailable dish${skipped > 1 ? "es" : ""} skipped)` : ""), "success");
     location.href = "cart.html";
   } catch (e) {
     toast(e.message, "error");

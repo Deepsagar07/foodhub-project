@@ -5,7 +5,8 @@ const Review = require('../models/Review');
 const asyncHandler = require('../middleware/asyncHandler');
 const { fileUrl } = require('../middleware/upload');
 
-// POST /api/restaurants/:id/reviews (protect)  { rating, comment } + optional photo -> 201
+// POST /api/restaurants/:id/reviews (protect)  { rating, comment } + optional photo
+// -> 201 when creating a new review, 200 when updating an existing one
 const addReview = asyncHandler(async (req, res) => {
   // multipart/form-data sends fields as strings, so coerce rating to a number
   const rating = Number(req.body.rating);
@@ -23,7 +24,9 @@ const addReview = asyncHandler(async (req, res) => {
   // One review per user per restaurant: a second review updates the first
   // instead of skewing the average with duplicates.
   let review = await Review.findOne({ user: req.user.id, restaurant: restaurant._id });
+  let isUpdate = false;
   if (review) {
+    isUpdate = true;
     review.rating = rating;
     review.comment = comment ? String(comment).trim() : '';
     if (req.file) review.photo = fileUrl(req.file);
@@ -47,7 +50,8 @@ const addReview = asyncHandler(async (req, res) => {
   restaurant.ratingCount = stats[0].count;
   await restaurant.save();
 
-  res.status(201).json(review);
+  // 200 when updating an existing review, 201 only when creating a new one
+  res.status(isUpdate ? 200 : 201).json(review);
 });
 
 // GET /api/restaurants/:id/reviews -> all reviews for a restaurant, newest first

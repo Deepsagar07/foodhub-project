@@ -6,7 +6,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 // GET /api/restaurants/:id/menu?category=&veg=true|false  -> filtered menu items
 const getRestaurantMenu = asyncHandler(async (req, res) => {
   const restaurant = await Restaurant.findById(req.params.id);
-  if (!restaurant) {
+  if (!restaurant || ['pending', 'suspended'].includes(restaurant.status)) {
     return res.status(404).json({ message: 'Restaurant not found' });
   }
 

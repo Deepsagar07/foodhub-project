@@ -139,7 +139,7 @@ const Cart = {
     if (c.items[key]) {
       if (c.items[key].qty >= MAX_QTY_PER_ITEM) {
         toast("Maximum " + MAX_QTY_PER_ITEM + " units per item", "error");
-        return true;
+        return false; // blocked: caller must not show a success toast
       }
       c.items[key].qty += 1;
     } else {
@@ -242,7 +242,7 @@ function renderNavbar() {
     + '<div class="relative" id="loc-wrap">'
     + '<button onclick="toggleLocMenu(event)" class="hidden sm:flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-xl surface hover:opacity-80" title="Set your location">📍 <span id="nav-location-label">Set location</span></button>'
     + '<div id="loc-menu" class="hidden absolute left-0 mt-2 w-56 surface rounded-xl z-50 py-2" style="box-shadow:var(--shadow)">'
-    + '<button onclick="hideLocMenu();detectLocation()" class="block w-full text-left px-4 py-2 text-sm hover:opacity-70">📍 Detect my location (GPS)</button>'
+    + '<button onclick="hideLocMenu();detectLocation().then(afterLocationSet)" class="block w-full text-left px-4 py-2 text-sm hover:opacity-70">📍 Detect my location (GPS)</button>'
     + '<button onclick="hideLocMenu();setManualLocation()" class="block w-full text-left px-4 py-2 text-sm hover:opacity-70">✎ Type location manually</button>'
     + "</div></div>"
     + '<button onclick="toggleTheme()" class="w-10 h-10 rounded-xl surface flex items-center justify-center" title="Toggle dark mode"><span class="theme-icon">' + themeIcon + "</span></button>"
@@ -330,7 +330,7 @@ function detectLocation() {
 function setManualLocation() {
   var q = prompt("Enter your area or city (e.g. Rajpur Road, Dehradun):");
   if (!q || !q.trim()) return;
-  geocodeAndSave(q.trim(), q.trim());
+  geocodeAndSave(q.trim(), q.trim()).then(afterLocationSet);
 }
 
 /** Footer locality pills: set the delivery location to that Dehradun area. */
@@ -382,7 +382,7 @@ function areaMatches(userArea, restArea) {
   const tokens = (s) =>
     s.toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w.length >= 3 && w !== "road");
   const uw = tokens(userArea), rw = tokens(restArea);
-  if (!uw.length || !rw.length) return true;
+  if (!uw.length || !rw.length) return false; // no usable tokens: cannot confirm a match
   const allIn = (a, b) => a.every((w) => b.includes(w));
   return allIn(uw, rw) || allIn(rw, uw);
 }
@@ -391,30 +391,37 @@ function areaMatches(userArea, restArea) {
  * null = no location saved yet, or the area is outside our service cities
  * (the site then shows a "Coming soon" state instead of restaurants).
  *
- * Detection is two-layer:
- *  1. Name match (fast): area/city string contains a known name.
- *  2. GPS radius (robust): villages near a city often reverse-geocode
- *     without the city name, so we also accept anything within 70 km
- *     of Dehradun or Patna.
+ * Detection is two-layer, GPS first when coordinates exist:
+ *  1. GPS radius (authoritative): if the location has lat/lon, the 70 km
+ *     radius decides. A name match must never override GPS — e.g. a user
+ *     in Raipur, Chhattisgarh must not get Dehradun restaurants just
+ *     because "Raipur" is also a Dehradun area name. GPS outside both
+ *     radii -> null ("Coming soon").
+ *  2. Name match (fallback, no GPS only): area/city string contains a
+ *     known name. Used for manually typed locations, which carry no
+ *     coordinates, and for villages that reverse-geocode without the
+ *     city name.
  */
 function getServiceCity() {
   const loc = getSavedLocation();
   if (!loc) return null;
+  // GPS radius (Haversine, km) — checked first when coordinates exist
+  const distKm = (la1, lo1, la2, lo2) => {
+    const R = 6371, dLa = (la2 - la1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;
+    const a = Math.sin(dLa / 2) ** 2 +
+      Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  };
+  if (loc.lat && loc.lon) {
+    if (distKm(loc.lat, loc.lon, 30.3165, 78.0322) <= 70) return "Dehradun";
+    if (distKm(loc.lat, loc.lon, 25.5941, 85.1376) <= 70) return "Patna";
+    return null; // GPS present but outside both service radii
+  }
+  // No GPS: fall back to the name match (manual locations)
   const hay = ((loc.area || "") + " " + (loc.city || "")).toLowerCase();
   const inList = (areas) => areas.some((a) => hay.includes(a.toLowerCase()));
   if (/patna/.test(hay) || inList(SERVICEABLE.Patna)) return "Patna";
   if (/dehradun/.test(hay) || inList(SERVICEABLE.Dehradun)) return "Dehradun";
-  // GPS fallback: distance from city centres (Haversine, km)
-  if (loc.lat && loc.lon) {
-    const distKm = (la1, lo1, la2, lo2) => {
-      const R = 6371, dLa = (la2 - la1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;
-      const a = Math.sin(dLa / 2) ** 2 +
-        Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
-      return 2 * R * Math.asin(Math.sqrt(a));
-    };
-    if (distKm(loc.lat, loc.lon, 30.3165, 78.0322) <= 70) return "Dehradun";
-    if (distKm(loc.lat, loc.lon, 25.5941, 85.1376) <= 70) return "Patna";
-  }
   return null;
 }
 
@@ -636,7 +643,7 @@ const EYE_OFF_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"
  *  <button type="button" onclick="togglePw('password', this)">…</button> */
 function togglePw(inputId, btn) {
   const inp = document.getElementById(inputId);
-  if (!inp) return;
+  if (!inp || !btn) return;
   const show = inp.type === "password";
   inp.type = show ? "text" : "password";
   btn.innerHTML = show ? EYE_OFF_SVG : EYE_SVG;
@@ -663,10 +670,11 @@ function sendVisitBeacon() {
 
 /* ---------------- Footer (injected on every page) ---------------- */
 
-/** Brand SVG icon link (original logos, 24x24, currentColor — no emoji, no CDN). */
+/** Brand SVG icon (non-link — there is no real FoodHub social profile,
+ *  so this renders as a plain icon and clicking it does nothing). */
 function socIcon(title, d) {
-  return '<a href="#" title="' + title + '" aria-label="' + title + '" class="hover:opacity-70 transition-opacity">'
-    + '<svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + d + '"/></svg></a>';
+  return '<span title="' + title + '" aria-label="' + title + '" class="hover:opacity-70 transition-opacity">'
+    + '<svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + d + '"/></svg></span>';
 }
 
 const SOC_ICONS = {

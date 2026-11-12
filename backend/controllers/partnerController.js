@@ -221,15 +221,23 @@ const registerRestaurant = asyncHandler(async (req, res) => {
   });
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = await User.create({
-    name: ownerName.trim(),
-    email: normalizedEmail,
-    phone: phone ? String(phone).trim() : '',
-    passwordHash,
-    role: 'restaurant',
-    restaurant: restaurant._id,
-    signupIp: req.ip || '',
-  });
+  let user;
+  try {
+    user = await User.create({
+      name: ownerName.trim(),
+      email: normalizedEmail,
+      phone: phone ? String(phone).trim() : '',
+      passwordHash,
+      role: 'restaurant',
+      restaurant: restaurant._id,
+      signupIp: req.ip || '',
+    });
+  } catch (err) {
+    // User creation failed (e.g. duplicate-email race) — remove the
+    // restaurant we just created so it isn't left orphaned.
+    await Restaurant.deleteOne({ _id: restaurant._id }).catch(() => {});
+    throw err;
+  }
 
   const safe = { id: user._id, name: user.name, email: user.email, role: user.role, restaurantId: String(restaurant._id) };
   res.status(201).json({ token: signPartnerToken(user), user: safe, restaurant });

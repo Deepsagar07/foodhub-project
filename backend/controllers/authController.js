@@ -74,6 +74,12 @@ const login = asyncHandler(async (req, res) => {
   }
 
   // Brute-force protection: 3 wrong passwords lock the account for 24 hours
+  // Once a lock has expired, the attempt counter resets — otherwise a single
+  // wrong password after expiry would instantly re-lock the account for 24h.
+  if (user.lockUntil && user.lockUntil <= new Date()) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+  }
   if (user.lockUntil && user.lockUntil > new Date()) {
     const msLeft = user.lockUntil.getTime() - Date.now();
     const hrs = Math.floor(msLeft / 3600000);

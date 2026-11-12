@@ -122,7 +122,7 @@ async function applyCoupon() {
   try {
     const data = await apiFetch("/coupons/validate" + qs({ code, subtotal: Cart.subtotal() }));
     if (!data.valid) throw new Error(data.message || "Invalid coupon.");
-    coupon = { code, discount: Number(data.discount) || 0, freeDelivery: !!data.freeDelivery };
+    coupon = { code, discount: Number(data.discount) || 0, freeDelivery: !!data.freeDelivery, minOrder: Number(data.minOrder) || 0 };
     localStorage.setItem("fh_coupon", JSON.stringify(coupon));
     msg.textContent = "✓ " + code + " applied — you save " + inr(coupon.discount)
       + (coupon.freeDelivery ? " + FREE delivery!" : "");
@@ -139,6 +139,17 @@ async function applyCoupon() {
 
 function renderBill() {
   const subtotal = Cart.subtotal();
+  // Drop a stored coupon the moment the cart falls below its minimum order
+  // (it used to stay visible, then fail at Place Order). The backend still
+  // re-validates at order time — this just keeps the shown bill honest.
+  if (coupon && coupon.minOrder && subtotal < coupon.minOrder) {
+    coupon = null;
+    localStorage.removeItem("fh_coupon");
+    const msg = document.getElementById("coupon-msg");
+    if (msg) { msg.textContent = "Coupon removed — it needs a minimum order."; msg.style.color = "var(--danger)"; }
+    const input = document.getElementById("coupon");
+    if (input) input.value = "";
+  }
   const discount = coupon ? Math.min(coupon.discount, subtotal) : 0;
   // FREEDEL-style coupons waive the delivery fee
   let fee = RESTAURANT && RESTAURANT.deliveryFee != null ? Number(RESTAURANT.deliveryFee) : 30;

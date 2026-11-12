@@ -19,6 +19,7 @@ function emitStatus(req, order) {
 // GET /api/rider/me -> my restaurant (name shown in the rider panel header)
 const getMe = asyncHandler(async (req, res) => {
   const restaurant = await Restaurant.findById(req.restaurantId).select('name area city');
+  if (!restaurant) return res.status(404).json({ message: 'Restaurant not found' });
   res.json({ restaurant });
 });
 
@@ -42,6 +43,11 @@ const markDelivered = asyncHandler(async (req, res) => {
   if (order.status !== 'on_the_way') {
     return res.status(400).json({ message: `Cannot mark delivered: order is "${order.status}"` });
   }
+  // Pickup must happen first — otherwise the customer never sees
+  // "Picked up" / the live ETA, and the order jumps straight to delivered.
+  if (!order.pickedUpAt) {
+    return res.status(400).json({ message: 'Pick up the order first — it has not been picked up yet' });
+  }
   order.status = 'delivered';
   await order.save();
   emitStatus(req, order);
@@ -63,8 +69,10 @@ const updateLocation = asyncHandler(async (req, res) => {
   order.riderLat = lat;
   order.riderLng = lng;
   order.riderLocationAt = new Date();
-  // Auto-detect arrival: if rider is within 150m of delivery point, mark arrived
-  if (order.deliveryLat && order.deliveryLng) {
+  // Auto-detect arrival: if rider is within 150m of delivery point, mark arrived.
+  // Explicit null checks: a coordinate of exactly 0 is a real GPS value,
+  // not "no GPS" (a truthiness check would wrongly skip it).
+  if (order.deliveryLat != null && order.deliveryLng != null) {
     const d = haversine(lat, lng, order.deliveryLat, order.deliveryLng);
     if (d < 0.15 && !order.arrivedAt) {
       order.arrivedAt = new Date();

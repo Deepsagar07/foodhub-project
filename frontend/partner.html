@@ -27,30 +27,11 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { display:
         <p class="text-sm text-muted mt-1">Manage live orders, menu & delivery boys.</p>
       </div>
 
-      <!-- Tabs -->
-      <div class="flex gap-2 mb-6">
-        <button id="tab-login" onclick="pTab('login')" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white" style="background:var(--brand)">Login</button>
-        <button id="tab-register" onclick="pTab('register')" class="flex-1 py-2.5 rounded-xl text-sm font-bold surface text-muted hover:opacity-70">Register</button>
-      </div>
-
-      <!-- LOGIN PANE -->
-      <div id="pane-login" class="space-y-3">
-        <input id="p-email" type="email" class="input" placeholder="Email *" autocomplete="email">
-        <div class="relative">
-          <input id="p-password" type="password" class="input pr-11" placeholder="Password *" autocomplete="current-password">
-          <button type="button" onclick="togglePw('p-password', this)" aria-label="Show password" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:opacity-70">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-        </div>
-        <p id="p-login-err" class="text-sm hidden" style="color:var(--danger)"></p>
-        <button class="btn-brand w-full" onclick="partnerLogin()">Login to Dashboard</button>
-        <p class="text-sm text-muted text-center mt-2">
-          New here? <a href="#" onclick="pTab('register');return false;" class="font-semibold" style="color:var(--brand-dark)">Register your restaurant</a>
-        </p>
-      </div>
+      <!-- One shared login: partners log in via login.html (role redirect
+           sends them here). This page is register-only — no separate login. -->
 
       <!-- REGISTER PANE -->
-      <div id="pane-register" class="space-y-3 hidden">
+      <div id="pane-register" class="space-y-3">
         <p class="text-xs font-bold" style="color:var(--brand-dark)">YOUR RESTAURANT</p>
         <input id="rg-rname" class="input" placeholder="Restaurant name *">
         <div class="grid grid-cols-2 gap-3">
@@ -78,7 +59,7 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { display:
         <button class="btn-brand w-full" onclick="partnerRegister()">Register My Restaurant</button>
         <p class="text-xs text-muted text-center">Your restaurant goes live after a quick admin approval. You can add your menu right away!</p>
         <p class="text-sm text-muted text-center mt-2">
-          Already registered? <a href="#" onclick="pTab('login');return false;" class="font-semibold" style="color:var(--brand-dark)">Log in here</a>
+          Already registered? <a href="login.html" class="font-semibold" style="color:var(--brand-dark)">Log in here</a>
         </p>
       </div>
     </div>
@@ -246,48 +227,7 @@ async function pFetch(path, { method = "GET", body = null, form = null } = {}) {
   throw new Error("unauthorized");
 }
 
-// ---------- Tabs ----------
-function pTab(which) {
-  const isLogin = which === "login";
-  document.getElementById("pane-login").classList.toggle("hidden", !isLogin);
-  document.getElementById("pane-register").classList.toggle("hidden", isLogin);
-  const tl = document.getElementById("tab-login");
-  const tr = document.getElementById("tab-register");
-  tl.style.background = isLogin ? "var(--brand)" : "";
-  tl.classList.toggle("text-white", isLogin);
-  tl.classList.toggle("surface", !isLogin);
-  tl.classList.toggle("text-muted", !isLogin);
-  tr.style.background = !isLogin ? "var(--brand)" : "";
-  tr.classList.toggle("text-white", !isLogin);
-  tr.classList.toggle("surface", isLogin);
-  tr.classList.toggle("text-muted", isLogin);
-}
-
-// ---------- Auth ----------
-async function partnerLogin() {
-  const email = document.getElementById("p-email").value.trim();
-  const password = document.getElementById("p-password").value;
-  const err = document.getElementById("p-login-err");
-  err.classList.add("hidden");
-  if (!email || !password) {
-    err.textContent = "Enter your email and password.";
-    err.classList.remove("hidden");
-    return;
-  }
-  try {
-    const user = await login(email, password); // from auth.js — saves fh_token + fh_user
-    if (user.role !== "restaurant") {
-      err.textContent = "This account is not a restaurant partner.";
-      err.classList.remove("hidden");
-      return;
-    }
-    enterPanel();
-  } catch (e) {
-    err.textContent = e.message || "Login failed.";
-    err.classList.remove("hidden");
-  }
-}
-
+// ---------- Auth (register-only; login lives on login.html) ----------
 async function partnerRegister() {
   perr(null);
   const body = {
@@ -472,7 +412,7 @@ async function loadMenu() {
       <div class="surface rounded-2xl p-3 flex gap-3 items-center" style="box-shadow:var(--shadow)">
         <img src="${m.image || ""}" onerror="this.style.display='none'" class="w-14 h-14 rounded-xl object-cover" alt="">
         <div class="flex-1 min-w-0">
-          <p class="font-bold text-sm truncate">${m.name} ${m.isVeg ? "🟢" : "🔴"}</p>
+          <p class="font-bold text-sm truncate">${m.name} ${(m.veg ?? m.isVeg ?? true) ? "🟢" : "🔴"}</p>
           <p class="text-xs text-muted">₹${m.price} ${m.isAvailable !== false ? "" : "· ⛔ unavailable"}</p>
         </div>
         <div class="flex flex-col gap-1">
@@ -494,7 +434,7 @@ function openDishModal(id) {
   const m = id ? (window.__menu || []).find(x => x._id === id) : null;
   document.getElementById("dish-name").value = m ? m.name : "";
   document.getElementById("dish-price").value = m ? m.price : "";
-  document.getElementById("dish-veg").value = m ? String(!!m.isVeg) : "true";
+  document.getElementById("dish-veg").value = m ? String(!!(m.veg ?? m.isVeg ?? true)) : "true";
   document.getElementById("dish-cat").value = m ? (m.category || "") : "";
   document.getElementById("dish-desc").value = m ? (m.description || "") : "";
   document.getElementById("dish-imgurl").value = m && m.image && !m.image.startsWith("/uploads") ? m.image : "";
@@ -512,13 +452,15 @@ async function saveDish() {
   const form = new FormData();
   form.append("name", name);
   form.append("price", price);
-  form.append("isVeg", document.getElementById("dish-veg").value === "true");
+  form.append("veg", document.getElementById("dish-veg").value);
   form.append("category", document.getElementById("dish-cat").value.trim());
   form.append("description", document.getElementById("dish-desc").value.trim());
   const url = document.getElementById("dish-imgurl").value.trim();
-  if (url) form.append("imageUrl", url);
   const file = document.getElementById("dish-img").files[0];
+  // Backend reads the "image" field (file wins, else the pasted URL).
+  // The old "imageUrl" field was silently ignored, so pasted URLs never saved.
   if (file) form.append("image", file);
+  else if (url) form.append("image", url);
   try {
     if (editingDishId) await pFetch(`/partner/menu/${editingDishId}`, { method: "PUT", form });
     else await pFetch("/partner/menu", { method: "POST", form });

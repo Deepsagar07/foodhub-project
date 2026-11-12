@@ -3,6 +3,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 const MenuItem = require('../models/MenuItem');
+const Review = require('../models/Review');
 const LoginSession = require('../models/LoginSession');
 const asyncHandler = require('../middleware/asyncHandler');
 const { fileUrl } = require('../middleware/upload');
@@ -193,13 +194,19 @@ const unlockUser = asyncHandler(async (req, res) => {
   res.json({ ok: true });
 });
 
-// DELETE /api/admin/restaurants/:id (admin) -> reject & remove a pending restaurant
-// (plus its partner account, riders and menu items — it never went live,
-// so there are no customer orders to worry about)
+// DELETE /api/admin/restaurants/:id (admin) -> reject & remove a restaurant
+// (plus its partner account, riders, menu items and reviews). A restaurant
+// with existing customer orders CANNOT be deleted — suspend it instead,
+// otherwise its orders would be orphaned with nowhere to point.
 const rejectRestaurant = asyncHandler(async (req, res) => {
   const r = await Restaurant.findById(req.params.id);
   if (!r) return res.status(404).json({ message: 'Restaurant not found' });
+  const orderCount = await Order.countDocuments({ restaurant: r._id });
+  if (orderCount > 0) {
+    return res.status(400).json({ message: 'Cannot delete restaurant with existing orders. Suspend it instead.' });
+  }
   await MenuItem.deleteMany({ restaurant: r._id });
+  await Review.deleteMany({ restaurant: r._id });
   await User.deleteMany({ restaurant: r._id, role: { $in: ['restaurant', 'delivery'] } });
   await r.deleteOne();
   res.json({ message: 'Restaurant rejected and removed' });
