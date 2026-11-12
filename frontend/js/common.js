@@ -225,12 +225,14 @@ function renderNavbar() {
   const nav = document.getElementById("navbar");
   if (!nav) return;
 
-  // Admins see only a minimal navbar: logo + theme + profile. No customer
-  // links (Home/My Orders/Favorites), no location picker, no cart.
-  if (user && user.role === "admin") {
+  // Admins and restaurant partners see only a minimal navbar: logo + theme
+  // + profile. No customer links (Home/My Orders/Favorites), no location
+  // picker, no cart.
+  if (user && (user.role === "admin" || user.role === "restaurant")) {
+    const home = user.role === "admin" ? "admin.html" : "partner.html";
     nav.innerHTML =
       '<div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">'
-      + '<a href="admin.html" class="flex items-center gap-2 font-display font-bold text-xl">'
+      + '<a href="' + home + '" class="flex items-center gap-2 font-display font-bold text-xl">'
       + '<span class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xl" style="background:var(--brand)">🍔</span>'
       + '<span>Food<span style="color:var(--brand)">Hub</span></span></a>'
       + '<div class="flex items-center gap-2">'
@@ -494,10 +496,11 @@ function profileDropdown(user) {
     + '<div class="px-4 py-2 border-b" style="border-color:var(--border)">'
     + '<p class="font-semibold text-sm truncate">' + esc(user.name) + "</p>"
     + '<p class="text-xs text-muted truncate">' + esc(user.email || "") + "</p></div>"
-    + (user.role === "admin" ? ""
+    + (user.role === "admin" || user.role === "restaurant" ? ""
       : '<a href="orders.html" class="block px-4 py-2 text-sm hover:opacity-70">📦 My Orders</a>'
       + '<a href="favorites.html" class="block px-4 py-2 text-sm hover:opacity-70">❤️ Favorites</a>')
     + (isAdmin() ? '<a href="admin.html" class="block px-4 py-2 text-sm hover:opacity-70">📊 Admin Dashboard</a>' : "")
+    + (user.role === "restaurant" ? '<a href="partner.html" class="block px-4 py-2 text-sm hover:opacity-70">🏪 Partner Panel</a>' : "")
     + '<button onclick="logout()" class="block w-full text-left px-4 py-2 text-sm font-medium hover:opacity-70" style="color:#dc2626">↩ Logout</button>'
     + "</div></div>";
 }
@@ -526,9 +529,9 @@ document.addEventListener("click", function (e) {
 
 function renderMobileNav() {
   if (document.getElementById("mobile-nav")) return;
-  // Admins don't get the mobile customer nav (Home/Orders/Cart/Saved).
+  // Admins and partners don't get the mobile customer nav (Home/Orders/Cart/Saved).
   const _au = currentUser();
-  if (_au && _au.role === "admin") return;
+  if (_au && (_au.role === "admin" || _au.role === "restaurant")) return;
   const themeIcon = (localStorage.getItem("fh_theme") || "light") === "dark" ? "☀️" : "🌙";
   const el = document.createElement("nav");
   el.id = "mobile-nav";
@@ -705,9 +708,9 @@ const SOC_ICONS = {
 
 function renderFooter() {
   if (document.getElementById("site-footer")) return;
-  // Admins see only their dashboard — no customer footer.
+  // Admins and partners see only their dashboard — no customer footer.
   const _au = currentUser();
-  if (_au && _au.role === "admin") return;
+  if (_au && (_au.role === "admin" || _au.role === "restaurant")) return;
   const f = document.createElement("footer");
   f.id = "site-footer";
   f.className = "mt-16 surface border-t";

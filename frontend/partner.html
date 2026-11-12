@@ -98,27 +98,39 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { display:
       </div>
     </div>
 
+    <!-- Section navigation (sticky, with live order badges) -->
+    <div class="sticky top-16 z-20 -mx-4 px-4 py-2 mb-6 surface" style="box-shadow:var(--shadow)">
+      <div class="flex gap-2 overflow-x-auto whitespace-nowrap" style="scrollbar-width:none">
+        <button onclick="scrollToSec('nav-new')" class="text-sm font-semibold px-3 py-2 rounded-full surface hover:opacity-80 flex items-center gap-1.5 shrink-0" style="border:1px solid var(--border)">🔔 New Orders <span id="nav-badge-new" class="min-w-[20px] h-5 px-1 rounded-full text-white text-xs font-bold items-center justify-center" style="background:var(--brand);display:none">0</span></button>
+        <button onclick="scrollToSec('nav-prep')" class="text-sm font-semibold px-3 py-2 rounded-full surface hover:opacity-80 flex items-center gap-1.5 shrink-0" style="border:1px solid var(--border)">👨‍🍳 Preparing <span id="nav-badge-prep" class="min-w-[20px] h-5 px-1 rounded-full text-white text-xs font-bold items-center justify-center" style="background:var(--brand);display:none">0</span></button>
+        <button onclick="scrollToSec('nav-way')" class="text-sm font-semibold px-3 py-2 rounded-full surface hover:opacity-80 flex items-center gap-1.5 shrink-0" style="border:1px solid var(--border)">🛵 On the Way <span id="nav-badge-way" class="min-w-[20px] h-5 px-1 rounded-full text-white text-xs font-bold items-center justify-center" style="background:var(--brand);display:none">0</span></button>
+        <button onclick="scrollToSec('nav-menu')" class="text-sm font-semibold px-3 py-2 rounded-full surface hover:opacity-80 shrink-0" style="border:1px solid var(--border)">🍽️ Menu</button>
+        <button onclick="scrollToSec('nav-riders')" class="text-sm font-semibold px-3 py-2 rounded-full surface hover:opacity-80 shrink-0" style="border:1px solid var(--border)">🛵 Riders</button>
+        <button onclick="scrollToSec('nav-history')" class="text-sm font-semibold px-3 py-2 rounded-full surface hover:opacity-80 shrink-0" style="border:1px solid var(--border)">📋 History</button>
+      </div>
+    </div>
+
     <!-- New orders -->
-    <h2 class="font-display font-bold text-lg mb-3">🔔 New Orders</h2>
+    <h2 id="nav-new" class="font-display font-bold text-lg mb-3 scroll-mt-32">🔔 New Orders</h2>
     <div id="sec-new" class="space-y-3 mb-6"><p class="text-sm text-muted">No new orders.</p></div>
 
     <!-- Preparing -->
-    <h2 class="font-display font-bold text-lg mb-3">👨‍🍳 Preparing</h2>
+    <h2 id="nav-prep" class="font-display font-bold text-lg mb-3 scroll-mt-32">👨‍🍳 Preparing</h2>
     <div id="sec-prep" class="space-y-3 mb-6"><p class="text-sm text-muted">Nothing being prepared.</p></div>
 
     <!-- On the way -->
-    <h2 class="font-display font-bold text-lg mb-3">🛵 On the Way</h2>
+    <h2 id="nav-way" class="font-display font-bold text-lg mb-3 scroll-mt-32">🛵 On the Way</h2>
     <div id="sec-way" class="space-y-3 mb-6"><p class="text-sm text-muted">No deliveries in progress.</p></div>
 
     <!-- My Menu -->
     <div class="flex items-center justify-between mb-3">
-      <h2 class="font-display font-bold text-lg">🍽️ My Menu</h2>
+      <h2 id="nav-menu" class="font-display font-bold text-lg scroll-mt-32">🍽️ My Menu</h2>
       <button class="text-sm font-bold px-4 py-2 rounded-xl text-white" style="background:var(--brand)" onclick="openDishModal()">+ Add Dish</button>
     </div>
     <div id="sec-menu" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6"><p class="text-sm text-muted">Loading menu…</p></div>
 
     <!-- Delivery boys -->
-    <h2 class="font-display font-bold text-lg mb-3">🛵 Delivery Boys</h2>
+    <h2 id="nav-riders" class="font-display font-bold text-lg mb-3 scroll-mt-32">🛵 Delivery Boys</h2>
     <div class="surface rounded-2xl p-4 mb-3" style="box-shadow:var(--shadow)">
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <input id="rider-name" class="input" placeholder="Name *">
@@ -131,7 +143,7 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { display:
     <div id="sec-riders" class="space-y-2 mb-6"><p class="text-sm text-muted">No delivery boys added.</p></div>
 
     <!-- History -->
-    <h2 class="font-display font-bold text-lg mb-3">📋 History</h2>
+    <h2 id="nav-history" class="font-display font-bold text-lg mb-3 scroll-mt-32">📋 History</h2>
     <div id="sec-history" class="space-y-3 mb-6"><p class="text-sm text-muted">No past orders.</p></div>
   </div>
 </main>
@@ -370,6 +382,18 @@ function orderCard(o) {
   </div>`;
 }
 
+// ---------- Section navigation ----------
+function scrollToSec(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function updateNavBadge(id, n) {
+  const b = document.getElementById(id);
+  if (!b) return;
+  b.textContent = n;
+  b.style.display = n > 0 ? "inline-flex" : "none";
+}
+
 async function loadOrders(silent) {
   try {
     const orders = await pFetch("/partner/orders");
@@ -386,9 +410,12 @@ async function loadOrders(silent) {
         ? secs[id].map(orderCard).join("")
         : `<p class="text-sm text-muted">${empty[id]}</p>`;
     }
-    // Update stats
+    // Update stats + nav badges (live: socket new-order also calls this)
     document.getElementById("st-new").textContent = secs["sec-new"].length;
     document.getElementById("st-prep").textContent = secs["sec-prep"].length;
+    updateNavBadge("nav-badge-new", secs["sec-new"].length);
+    updateNavBadge("nav-badge-prep", secs["sec-prep"].length);
+    updateNavBadge("nav-badge-way", secs["sec-way"].length);
   } catch (e) {
     if (!silent && e.message !== "unauthorized") toast("Could not load orders.", "error");
   }
